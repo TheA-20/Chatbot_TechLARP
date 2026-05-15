@@ -1,0 +1,17 @@
+# Normalizar line endings
+* text=auto
+
+# Scripts shell SIEMPRE con LF (Linux/Debian)
+*.sh text eol=lf
+scripts/*.sh text eol=lf
+
+# Archivos de configuración con LF
+nginx.conf text eol=lf
+docker-compose.yml text eol=lf
+ecosystem.config.js text eol=lf
+
+# Binarios sin conversión
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.pdf binary

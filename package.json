@@ -1,0 +1,49 @@
+{
+  "name": "edularp-app",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint",
+    "db:init": "docker compose up -d && sleep 3 && npm run db:migrate",
+    "db:migrate": "node scripts/migrate.js"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.27.3",
+    "@hookform/resolvers": "^3.9.0",
+    "@types/pdfkit": "^0.17.5",
+    "autoprefixer": "^10.4.19",
+    "bcryptjs": "^2.4.3",
+    "groq-sdk": "^1.1.2",
+    "multer": "^1.4.5-lts.1",
+    "next": "14.2.5",
+    "next-auth": "^4.24.7",
+    "nodemailer": "^6.9.14",
+    "pdf-lib": "^1.17.1",
+    "pdfkit": "^0.18.0",
+    "postcss": "^8.4.38",
+    "postgres": "^3.4.4",
+    "react": "^18",
+    "react-dom": "^18",
+    "react-hook-form": "^7.52.1",
+    "react-markdown": "^10.1.0",
+    "remark-gfm": "^4.0.1",
+    "sharp": "^0.33.4",
+    "tailwindcss": "^3.4.1",
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "@types/bcryptjs": "^2.4.6",
+    "@types/multer": "^1.4.11",
+    "@types/node": "^20",
+    "@types/nodemailer": "^6.4.15",
+    "@types/react": "^18",
+    "@types/react-dom": "^18",
+    "dotenv": "^17.4.2",
+    "eslint": "^8",
+    "eslint-config-next": "14.2.5",
+    "typescript": "^5"
+  }
+}

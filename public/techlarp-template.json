@@ -1,0 +1,133 @@
+{
+  "_instrucciones": {
+    "uso": "Rellena todos los campos con la información real de tu TechLARP y sube este archivo en el formulario (botón 'Importar desde JSON'). Los campos marcados con * son obligatorios.",
+    "nivel_educativo_opciones": ["Primaria", "Secundaria"],
+    "tipo_version_opciones": ["original", "modificada"],
+    "status_opciones": ["borrador", "piloto", "validado"],
+    "formato_mision_opciones": ["Taller colaborativo", "Juego de rol", "Debate / Q&A", "Construcción / maker", "Investigación", "Otro"],
+    "tipo_objetivo_opciones": ["Histórico", "Técnico", "Narrativo / diseño", "Colaborativo", "Actitudinal", "Competencial", "Otro"],
+    "tipo_carta_opciones": ["personaje", "habilidad", "objeto", "evento", "figura_historica", "otro"],
+    "idioma_original_opciones": ["es", "en"],
+    "inclusion_index_nota": "Evalúa los 5 criterios del Gender Inclusion Index v1.0 que puede valorar el diseñador. Los otros 22 los propondrá automáticamente el sistema. Para cada criterio indica: estado (cumple/parcial/no_cumple) y evidencia (mín. 30 caracteres describiendo cómo se cumple o por qué no). El formulario guarda estos criterios dentro del nivel 'designer' al enviar."
+  },
+
+  "nombre": "",
+  "proyecto": "",
+  "descripcion": "",
+  "storyboard": "",
+  "storyboard_alt": "",
+  "nivel_educativo": "Secundaria",
+  "asignaturas": "",
+  "duracion_min": 120,
+  "num_participantes": 25,
+  "materiales": "",
+  "tipo_version": "original",
+  "idioma_original": "es",
+  "status": "borrador",
+
+  "paralelos": [
+    {
+      "narrativa": "",
+      "mundo_real": "",
+      "proposito": ""
+    },
+    {
+      "narrativa": "",
+      "mundo_real": "",
+      "proposito": ""
+    }
+  ],
+
+  "misiones": [
+    {
+      "titulo": "",
+      "objetivo": "",
+      "duracion_min": 30,
+      "formato": "Taller colaborativo",
+      "problema_larp": "",
+      "problema_real": "",
+      "solucion": "",
+      "recursos": ""
+    }
+  ],
+
+  "roles": [
+    {
+      "nombre_rol": "",
+      "nombre_habilidad": "",
+      "desc_habilidad": "",
+      "uso_juego": ""
+    }
+  ],
+
+  "cartas": [
+    {
+      "nombre": "",
+      "tipo": "personaje",
+      "habilidad": "",
+      "lore": "",
+      "descripcion": ""
+    }
+  ],
+
+  "objetivos": [
+    {
+      "tipo": "Histórico",
+      "descripcion": ""
+    },
+    {
+      "tipo": "Técnico",
+      "descripcion": ""
+    },
+    {
+      "tipo": "Colaborativo",
+      "descripcion": ""
+    }
+  ],
+
+  "competencias": [],
+
+  "evaluacion": "",
+  "notas_docente": "",
+
+  "recursos_globales": {
+    "materiales_impresos": "",
+    "kits_circuitos": "",
+    "materiales_craft": "",
+    "herramientas_facilitacion": "",
+    "cartas_roles": "",
+    "descripcion_facilitador": "",
+    "materiales_demostracion": ""
+  },
+
+  "imagenes_urls": [],
+
+  "inclusion_index": {
+    "_nota": "Evalua los 5 criterios. Para cada uno: estado (cumple/parcial/no_cumple) + evidencia (min 30 caracteres).",
+    "IT-01": {
+      "_criterio": "El LARP evita imaginería masculinizada en personajes, materiales visuales y narrativa.",
+      "estado": "cumple",
+      "evidencia": ""
+    },
+    "IT-02": {
+      "_criterio": "El diseño aborda barreras interseccionales: lengua, discapacidad, clase socioeconómica y contexto cultural.",
+      "estado": "cumple",
+      "evidencia": ""
+    },
+    "IM-04": {
+      "_criterio": "La actividad integra cultura maker y artesanía (construcción, prototipado, fabricación manual).",
+      "estado": "cumple",
+      "evidencia": ""
+    },
+    "LARP-10": {
+      "_criterio": "El storyboard es inclusivo y empodera a chicas en STEM como protagonistas con agencia real.",
+      "estado": "cumple",
+      "evidencia": ""
+    },
+    "LARP-11": {
+      "_criterio": "Las misiones incluyen científicas u otras profesionales STEM mujeres en roles narrativos clave.",
+      "estado": "cumple",
+      "evidencia": ""
+    }
+  }
+}
