@@ -1,5 +1,8 @@
 /** @type {import('next').NextConfig} */
+const isProd = process.env.NODE_ENV === 'production'
 const nextConfig = {
+  basePath: isProd ? '/techlarp-chatbot' : '',
+  assetPrefix: isProd ? '/techlarp-chatbot' : '',
   experimental: {
     serverActions: {
       allowedOrigins: [
@@ -10,8 +13,7 @@ const nextConfig = {
     },
   },
   images: { remotePatterns: [{ protocol: 'https', hostname: '**' }] },
-  // Registrar la IP del servidor en producción
-  ...(process.env.NODE_ENV === 'production' && {
+  ...(isProd && {
     output: 'standalone',
   }),
 }
