@@ -1,8 +1,9 @@
 /** @type {import('next').NextConfig} */
 const isProd = process.env.NODE_ENV === 'production'
+const useSubpath = process.env.USE_SUBPATH === 'true'
 const nextConfig = {
-  basePath: isProd ? '/techlarp-chatbot' : '',
-  assetPrefix: isProd ? '/techlarp-chatbot' : '',
+  basePath: (isProd && useSubpath) ? '/techlarp-chatbot' : '',
+  assetPrefix: (isProd && useSubpath) ? '/techlarp-chatbot' : '',
   experimental: {
     serverActions: {
       allowedOrigins: [
