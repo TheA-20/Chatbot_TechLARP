@@ -60,10 +60,12 @@ export async function POST(req: NextRequest) {
   const res = NextResponse.json({ ok: true, nombre, sesionId, esRetorno })
 
   // Cookie httpOnly — no accesible desde JS, expira en 48h
+  // secure:false mientras el servidor use HTTP puro (sin HTTPS/Certbot)
+  // Cambiar a secure:true cuando se active el dominio con SSL
   res.cookies.set('eval_token', token, {
     httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
-    sameSite: 'strict',
+    secure: false,
+    sameSite: 'lax',
     path: '/',
     maxAge: 48 * 60 * 60,
   })
