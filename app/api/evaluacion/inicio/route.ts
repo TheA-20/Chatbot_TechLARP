@@ -15,38 +15,46 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Nombre demasiado largo' }, { status: 400 })
   }
 
-  // Buscar sesión activa para este nombre (insensible a mayúsculas)
-  const [existente] = await sql`
-    SELECT id, token FROM sesiones_evaluacion
-    WHERE lower(nombre_evaluador) = lower(${nombre})
-      AND expira_en > now()
-    ORDER BY creado_en DESC
-    LIMIT 1
-  `
-
   let sesionId: string
   let token: string
   let esRetorno = false
 
-  if (existente) {
-    // Reutilizar sesión — extender expiración otras 48h
-    await sql`
-      UPDATE sesiones_evaluacion
-      SET expira_en = now() + INTERVAL '48 hours'
-      WHERE id = ${existente.id}
+  try {
+    // Buscar sesión activa para este nombre (insensible a mayúsculas)
+    const [existente] = await sql`
+      SELECT id, token FROM sesiones_evaluacion
+      WHERE lower(nombre_evaluador) = lower(${nombre})
+        AND expira_en > now()
+      ORDER BY creado_en DESC
+      LIMIT 1
     `
-    sesionId = existente.id
-    token = existente.token
-    esRetorno = true
-  } else {
-    // Crear nueva sesión
-    const [nueva] = await sql`
-      INSERT INTO sesiones_evaluacion (nombre_evaluador)
-      VALUES (${nombre})
-      RETURNING id, token
-    `
-    sesionId = nueva.id
-    token = nueva.token
+
+    if (existente) {
+      // Reutilizar sesión — extender expiración otras 48h
+      await sql`
+        UPDATE sesiones_evaluacion
+        SET expira_en = now() + INTERVAL '48 hours'
+        WHERE id = ${existente.id}
+      `
+      sesionId = existente.id
+      token = existente.token
+      esRetorno = true
+    } else {
+      // Crear nueva sesión
+      const [nueva] = await sql`
+        INSERT INTO sesiones_evaluacion (nombre_evaluador)
+        VALUES (${nombre})
+        RETURNING id, token
+      `
+      sesionId = nueva.id
+      token = nueva.token
+    }
+  } catch (err) {
+    console.error('[evaluacion/inicio] DB error:', err)
+    return NextResponse.json(
+      { error: 'Error al crear la sesión. Inténtalo de nuevo.' },
+      { status: 500 }
+    )
   }
 
   const res = NextResponse.json({ ok: true, nombre, sesionId, esRetorno })
