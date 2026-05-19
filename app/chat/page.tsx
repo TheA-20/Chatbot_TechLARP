@@ -45,6 +45,7 @@ export default function ChatPage() {
   const [input, setInput]         = useState('')
   const [cargando, setCargando]   = useState(false)
   const [downloading, setDownloading] = useState<string | null>(null)
+  const [pdfLang, setPdfLang]         = useState<'es' | 'en'>('es')
   const [lastLarps, setLastLarps] = useState<LarpRef[]>([])
   const [historial, setHistorial] = useState<HistorialSesion[]>([])
   const [activeSessionId, setActiveSessionId] = useState<string | null>(null)
@@ -129,7 +130,7 @@ export default function ChatPage() {
   async function handleDownloadPDF(id: string, nombre: string) {
     setDownloading(id)
     try {
-      const res = await fetch(`/api/edularp/${id}/pdf`)
+      const res = await fetch(`/api/edularp/${id}/pdf?lang=${pdfLang}`)
       if (!res.ok) throw new Error('Error')
       const blob = await res.blob()
       const url = URL.createObjectURL(blob)
@@ -158,7 +159,7 @@ export default function ChatPage() {
           ;(modified as any)[parts[0]][parseInt(parts[1])][parts[2]] = val
         }
       }
-      const res = await fetch(`/api/edularp/${previewLarpId}/pdf`, {
+      const res = await fetch(`/api/edularp/${previewLarpId}/pdf?lang=${pdfLang}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(modified),
@@ -866,6 +867,16 @@ export default function ChatPage() {
             {/* Footer — descarga */}
             {previewData && !previewCargando && (
               <div className="px-4 py-3 border-t border-gray-100 flex-shrink-0 space-y-2">
+                <div className="flex gap-1 justify-end">
+                  <button
+                    onClick={() => setPdfLang('es')}
+                    className={`text-xs px-2 py-1 rounded border transition-colors ${pdfLang === 'es' ? 'bg-primary text-white border-primary' : 'bg-white text-gray-500 border-gray-200 hover:bg-gray-50'}`}
+                  >ES</button>
+                  <button
+                    onClick={() => setPdfLang('en')}
+                    className={`text-xs px-2 py-1 rounded border transition-colors ${pdfLang === 'en' ? 'bg-primary text-white border-primary' : 'bg-white text-gray-500 border-gray-200 hover:bg-gray-50'}`}
+                  >EN</button>
+                </div>
                 {Object.keys(previewEdits).length > 0 && (
                   <div className="flex items-center gap-2">
                     <button

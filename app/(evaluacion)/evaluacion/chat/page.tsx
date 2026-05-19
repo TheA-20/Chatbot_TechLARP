@@ -78,6 +78,7 @@ export default function EvaluacionChatPage() {
 
   const [previewAbierto, setPreviewAbierto]   = useState(false)
   const [previewLarpId, setPreviewLarpId]     = useState<string | null>(null)
+  const [pdfLang, setPdfLang]                 = useState<'es' | 'en'>('es')
   const [previewData, setPreviewData]         = useState<LarpDetalle | null>(null)
   const [previewCargando, setPreviewCargando] = useState(false)
   const [previewTab, setPreviewTab]           = useState<'resumen' | 'misiones' | 'roles' | 'cartas'>('resumen')
@@ -188,7 +189,7 @@ export default function EvaluacionChatPage() {
   async function handleDownloadPDF(id: string, nombre: string) {
     setDownloading(id)
     try {
-      const res = await fetch(`/api/evaluacion/edularp/${id}/pdf`)
+      const res = await fetch(`/api/evaluacion/edularp/${id}/pdf?lang=${pdfLang}`)
       if (!res.ok) throw new Error('Error')
       const blob = await res.blob()
       const url = URL.createObjectURL(blob)
@@ -211,7 +212,7 @@ export default function EvaluacionChatPage() {
         if (parts.length === 2) { (modified as any)[parts[0]][parts[1]] = val }
         else if (parts.length === 3) { (modified as any)[parts[0]][parseInt(parts[1])][parts[2]] = val }
       }
-      const res = await fetch(`/api/evaluacion/edularp/${previewLarpId}/pdf`, {
+      const res = await fetch(`/api/evaluacion/edularp/${previewLarpId}/pdf?lang=${pdfLang}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(modified),
@@ -650,7 +651,18 @@ export default function EvaluacionChatPage() {
                 )}
               </div>
 
-              <div className="px-5 py-4 border-t border-gray-100 flex gap-2 flex-shrink-0">
+              <div className="px-5 py-4 border-t border-gray-100 flex flex-col gap-2 flex-shrink-0">
+                <div className="flex gap-1 justify-end">
+                  <button
+                    onClick={() => setPdfLang('es')}
+                    className={`text-xs px-2 py-1 rounded border transition-colors ${pdfLang === 'es' ? 'bg-violet-600 text-white border-violet-600' : 'bg-white text-gray-500 border-gray-200 hover:bg-gray-50'}`}
+                  >ES</button>
+                  <button
+                    onClick={() => setPdfLang('en')}
+                    className={`text-xs px-2 py-1 rounded border transition-colors ${pdfLang === 'en' ? 'bg-violet-600 text-white border-violet-600' : 'bg-white text-gray-500 border-gray-200 hover:bg-gray-50'}`}
+                  >EN</button>
+                </div>
+                <div className="flex gap-2">
                 <button
                   onClick={() => previewLarpId && handleDownloadPDF(previewLarpId, previewData.larp.nombre)}
                   disabled={!!downloading}
@@ -667,6 +679,7 @@ export default function EvaluacionChatPage() {
                     Descargar PDF modificado
                   </button>
                 )}
+                </div>
               </div>
             </div>
           ) : (

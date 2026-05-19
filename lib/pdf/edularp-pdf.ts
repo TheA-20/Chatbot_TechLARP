@@ -218,8 +218,99 @@ class PDFWriter {
   }
 }
 
+// ── Labels ──
+const LABELS = {
+  es: {
+    fichaTecnica: 'Ficha tecnica',
+    storyboard: 'Storyboard - Narrativa fantastica',
+    storyboardAlt: 'Storyboard alternativo',
+    paralelos: 'Paralelos con la realidad',
+    colNarrativa: 'Narrativa fantastica',
+    colEquivalente: 'Equivalente real',
+    colProposito: 'Proposito pedagogico',
+    misiones: 'Misiones',
+    misionN: (n: number) => `Mision ${n}`,
+    roles: 'Roles de participantes',
+    cartas: 'Cartas del juego',
+    objetivos: 'Objetivos de aprendizaje',
+    guiaDocente: 'Guia docente',
+    nombre: 'Nombre',
+    descripcion: 'Descripcion',
+    nivelEducativo: 'Nivel educativo',
+    asignaturas: 'Asignaturas',
+    duracion: 'Duracion',
+    duracionMin: (n: number) => `${n} minutos`,
+    participantes: 'Participantes',
+    tipoActividad: 'Tipo de actividad',
+    original: 'Original',
+    modificada: 'Modificada',
+    historialCambios: 'Historial de cambios',
+    modificadaVeces: (n: number) => n === 1 ? `Modificada ${n} vez` : `Modificada ${n} veces`,
+    autor: 'Autor',
+    materiales: 'Materiales',
+    competencias: 'Competencias',
+    formato: 'Formato',
+    objetivo: 'Objetivo',
+    problemaLarp: 'Problema (mundo LARP)',
+    problemaReal: 'Problema (mundo real)',
+    solucion: 'Solucion / descripcion',
+    recursos: 'Recursos',
+    habilidad: 'Habilidad',
+    usoJuego: 'Uso en el juego',
+    habilidadEfecto: 'Habilidad / efecto',
+    lore: 'Lore',
+    criteriosEval: 'Criterios de evaluacion',
+    notasDocente: 'Notas para el docente',
+    coverMeta: (min: number, p: number) => `${min} min  -  ${p} participantes`,
+  },
+  en: {
+    fichaTecnica: 'Technical sheet',
+    storyboard: 'Storyboard - Fantasy narrative',
+    storyboardAlt: 'Alternative storyboard',
+    paralelos: 'Parallels with reality',
+    colNarrativa: 'Fantasy narrative',
+    colEquivalente: 'Real-world equivalent',
+    colProposito: 'Pedagogical purpose',
+    misiones: 'Missions',
+    misionN: (n: number) => `Mission ${n}`,
+    roles: 'Participant roles',
+    cartas: 'Game cards',
+    objetivos: 'Learning objectives',
+    guiaDocente: 'Teacher guide',
+    nombre: 'Name',
+    descripcion: 'Description',
+    nivelEducativo: 'Educational level',
+    asignaturas: 'Subjects',
+    duracion: 'Duration',
+    duracionMin: (n: number) => `${n} minutes`,
+    participantes: 'Participants',
+    tipoActividad: 'Activity type',
+    original: 'Original',
+    modificada: 'Modified',
+    historialCambios: 'Change history',
+    modificadaVeces: (n: number) => n === 1 ? `Modified ${n} time` : `Modified ${n} times`,
+    autor: 'Author',
+    materiales: 'Materials',
+    competencias: 'Competencies',
+    formato: 'Format',
+    objetivo: 'Objective',
+    problemaLarp: 'Problem (LARP world)',
+    problemaReal: 'Problem (real world)',
+    solucion: 'Solution / description',
+    recursos: 'Resources',
+    habilidad: 'Skill',
+    usoJuego: 'Use in game',
+    habilidadEfecto: 'Skill / effect',
+    lore: 'Lore',
+    criteriosEval: 'Assessment criteria',
+    notasDocente: 'Teacher notes',
+    coverMeta: (min: number, p: number) => `${min} min  -  ${p} participants`,
+  },
+}
+
 // ── Main generator ──
-export async function generateEduLarpPDF(data: EduLarpData): Promise<Uint8Array> {
+export async function generateEduLarpPDF(data: EduLarpData, lang: 'es' | 'en' = 'es'): Promise<Uint8Array> {
+  const L = LABELS[lang]
   const doc = await PDFDocument.create()
   doc.setTitle(data.nombre)
   doc.setAuthor(data.autor_nombre ?? 'TechLARP')
@@ -286,7 +377,7 @@ export async function generateEduLarpPDF(data: EduLarpData): Promise<Uint8Array>
   w.drawCenteredText(data.asignaturas, { size: 14, color: COVER_LAVENDER })
   w.y -= 4
   w.drawCenteredText(
-    `${data.nivel_educativo}  -  ${data.duracion_min} min  -  ${data.num_participantes} participantes`,
+    `${data.nivel_educativo}  -  ${L.coverMeta(data.duracion_min, data.num_participantes)}`,
     { size: 12, color: COVER_LAVENDER }
   )
 
@@ -306,32 +397,31 @@ export async function generateEduLarpPDF(data: EduLarpData): Promise<Uint8Array>
 
   // ════════════════ FICHA TECNICA ════════════════
   w.newPage()
-  w.sectionTitle('Ficha tecnica')
-  w.labelValue('Nombre', data.nombre)
-  w.labelValue('Descripcion', data.descripcion)
-  w.labelValue('Nivel educativo', data.nivel_educativo)
-  w.labelValue('Asignaturas', data.asignaturas)
-  w.labelValue('Duracion', `${data.duracion_min} minutos`)
-  w.labelValue('Participantes', `${data.num_participantes}`)
+  w.sectionTitle(L.fichaTecnica)
+  w.labelValue(L.nombre, data.nombre)
+  w.labelValue(L.descripcion, data.descripcion)
+  w.labelValue(L.nivelEducativo, data.nivel_educativo)
+  w.labelValue(L.asignaturas, data.asignaturas)
+  w.labelValue(L.duracion, L.duracionMin(data.duracion_min))
+  w.labelValue(L.participantes, `${data.num_participantes}`)
   if (data.tipo_version) {
-    const tipoLabel = data.tipo_version === 'original' ? 'Original' : 'Modificada'
-    w.labelValue('Tipo de actividad', tipoLabel)
+    const tipoLabel = data.tipo_version === 'original' ? L.original : L.modificada
+    w.labelValue(L.tipoActividad, tipoLabel)
   }
   if (data.veces_modificada && data.veces_modificada > 0) {
-    const veces = data.veces_modificada
-    w.labelValue('Historial de cambios', veces === 1 ? `Modificada ${veces} vez` : `Modificada ${veces} veces`)
+    w.labelValue(L.historialCambios, L.modificadaVeces(data.veces_modificada))
   }
-  if (data.autor_nombre) w.labelValue('Autor', data.autor_nombre)
-  if (data.materiales) w.labelValue('Materiales', data.materiales)
-  if (data.competencias?.length) w.labelValue('Competencias', data.competencias.join(', '))
+  if (data.autor_nombre) w.labelValue(L.autor, data.autor_nombre)
+  if (data.materiales) w.labelValue(L.materiales, data.materiales)
+  if (data.competencias?.length) w.labelValue(L.competencias, data.competencias.join(', '))
 
   // ════════════════ STORYBOARD ════════════════
   w.y -= 10
-  w.sectionTitle('Storyboard - Narrativa fantastica')
+  w.sectionTitle(L.storyboard)
   w.drawText(data.storyboard)
   if (data.storyboard_alt) {
     w.y -= 8
-    w.drawText('Storyboard alternativo', { font: bold, size: 9, color: GRAY })
+    w.drawText(L.storyboardAlt, { font: bold, size: 9, color: GRAY })
     w.y -= 4
     w.drawText(data.storyboard_alt)
   }
@@ -339,7 +429,7 @@ export async function generateEduLarpPDF(data: EduLarpData): Promise<Uint8Array>
   // ════════════════ PARALELOS ════════════════
   if (data.paralelos.length > 0) {
     w.newPage()
-    w.sectionTitle('Paralelos con la realidad')
+    w.sectionTitle(L.paralelos)
 
     const colW = [CONTENT_W * 0.33, CONTENT_W * 0.33, CONTENT_W * 0.34]
     const cellPad = 6
@@ -348,7 +438,7 @@ export async function generateEduLarpPDF(data: EduLarpData): Promise<Uint8Array>
 
     // Header row
     w.rect(MARGIN, w.y - 14, CONTENT_W, 20, PURPLE)
-    const headers = ['Narrativa fantastica', 'Equivalente real', 'Proposito pedagogico']
+    const headers = [L.colNarrativa, L.colEquivalente, L.colProposito]
     let xPos = MARGIN
     for (let i = 0; i < headers.length; i++) {
       w.page.drawText(headers[i], {
@@ -393,14 +483,14 @@ export async function generateEduLarpPDF(data: EduLarpData): Promise<Uint8Array>
   // ════════════════ MISIONES ════════════════
   if (data.misiones.length > 0) {
     w.newPage()
-    w.sectionTitle('Misiones')
+    w.sectionTitle(L.misiones)
 
     for (let i = 0; i < data.misiones.length; i++) {
       const m = data.misiones[i]
       w.ensureSpace(80)
 
       w.rect(MARGIN, w.y - 16, CONTENT_W, 24, PURPLE_LIGHT)
-      const mTitle = `Mision ${i + 1}: ${m.titulo}`.replace(/[^\x20-\x7E\xA0-\xFF\u0100-\u017F]/g, '')
+      const mTitle = `${L.misionN(i + 1)}: ${m.titulo}`.replace(/[^\x20-\x7E\xA0-\xFF\u0100-\u017F]/g, '')
       try {
         w.page.drawText(mTitle, {
           x: MARGIN + 8, y: w.y - 10, size: 11, font: bold, color: PURPLE,
@@ -408,13 +498,13 @@ export async function generateEduLarpPDF(data: EduLarpData): Promise<Uint8Array>
       } catch { /* skip */ }
       w.y -= 30
 
-      if (m.formato) w.labelValue('Formato', m.formato)
-      if (m.duracion_min) w.labelValue('Duracion', `${m.duracion_min} min`)
-      w.labelValue('Objetivo', m.objetivo)
-      if (m.problema_larp) w.labelValue('Problema (mundo LARP)', m.problema_larp)
-      if (m.problema_real) w.labelValue('Problema (mundo real)', m.problema_real)
-      if (m.solucion) w.labelValue('Solucion / descripcion', m.solucion)
-      if (m.recursos) w.labelValue('Recursos', m.recursos)
+      if (m.formato) w.labelValue(L.formato, m.formato)
+      if (m.duracion_min) w.labelValue(L.duracion, `${m.duracion_min} min`)
+      w.labelValue(L.objetivo, m.objetivo)
+      if (m.problema_larp) w.labelValue(L.problemaLarp, m.problema_larp)
+      if (m.problema_real) w.labelValue(L.problemaReal, m.problema_real)
+      if (m.solucion) w.labelValue(L.solucion, m.solucion)
+      if (m.recursos) w.labelValue(L.recursos, m.recursos)
 
       w.y -= 8
       if (i < data.misiones.length - 1) w.divider()
@@ -424,7 +514,7 @@ export async function generateEduLarpPDF(data: EduLarpData): Promise<Uint8Array>
   // ════════════════ ROLES ════════════════
   if (data.roles.length > 0) {
     w.newPage()
-    w.sectionTitle('Roles de participantes')
+    w.sectionTitle(L.roles)
 
     for (let i = 0; i < data.roles.length; i++) {
       const r = data.roles[i]
@@ -439,9 +529,9 @@ export async function generateEduLarpPDF(data: EduLarpData): Promise<Uint8Array>
       } catch { /* skip */ }
       w.y -= 28
 
-      if (r.nombre_habilidad) w.labelValue('Habilidad', r.nombre_habilidad)
-      w.labelValue('Descripcion', r.desc_habilidad)
-      if (r.uso_juego) w.labelValue('Uso en el juego', r.uso_juego)
+      if (r.nombre_habilidad) w.labelValue(L.habilidad, r.nombre_habilidad)
+      w.labelValue(L.descripcion, r.desc_habilidad)
+      if (r.uso_juego) w.labelValue(L.usoJuego, r.uso_juego)
 
       w.y -= 6
       if (i < data.roles.length - 1) w.divider()
@@ -451,7 +541,7 @@ export async function generateEduLarpPDF(data: EduLarpData): Promise<Uint8Array>
   // ════════════════ CARTAS ════════════════
   if (data.cartas.length > 0) {
     w.newPage()
-    w.sectionTitle('Cartas del juego')
+    w.sectionTitle(L.cartas)
 
     for (let i = 0; i < data.cartas.length; i++) {
       const c = data.cartas[i]
@@ -466,8 +556,8 @@ export async function generateEduLarpPDF(data: EduLarpData): Promise<Uint8Array>
       } catch { /* skip */ }
       w.y -= 28
 
-      if (c.habilidad) w.labelValue('Habilidad / efecto', c.habilidad)
-      if (c.lore) w.labelValue('Lore', c.lore)
+      if (c.habilidad) w.labelValue(L.habilidadEfecto, c.habilidad)
+      if (c.lore) w.labelValue(L.lore, c.lore)
 
       w.y -= 4
       if (i < data.cartas.length - 1) w.divider()
@@ -478,7 +568,7 @@ export async function generateEduLarpPDF(data: EduLarpData): Promise<Uint8Array>
   if (data.objetivos.length > 0) {
     w.ensureSpace(80)
     w.y -= 10
-    w.sectionTitle('Objetivos de aprendizaje')
+    w.sectionTitle(L.objetivos)
 
     for (const o of data.objetivos) {
       w.ensureSpace(24)
@@ -500,15 +590,15 @@ export async function generateEduLarpPDF(data: EduLarpData): Promise<Uint8Array>
   if (data.evaluacion || data.notas_docente) {
     w.ensureSpace(80)
     w.y -= 10
-    w.sectionTitle('Guia docente')
+    w.sectionTitle(L.guiaDocente)
     if (data.evaluacion) {
-      w.drawText('Criterios de evaluacion', { font: bold, size: 9, color: GRAY })
+      w.drawText(L.criteriosEval, { font: bold, size: 9, color: GRAY })
       w.y -= 4
       w.drawText(data.evaluacion)
       w.y -= 8
     }
     if (data.notas_docente) {
-      w.drawText('Notas para el docente', { font: bold, size: 9, color: GRAY })
+      w.drawText(L.notasDocente, { font: bold, size: 9, color: GRAY })
       w.y -= 4
       w.drawText(data.notas_docente)
     }

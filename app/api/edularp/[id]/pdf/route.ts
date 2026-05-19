@@ -15,6 +15,7 @@ export async function GET(
   }
 
   const id = params.id
+  const lang = (_req.nextUrl.searchParams.get('lang') === 'en' ? 'en' : 'es') as 'es' | 'en'
 
   // 2. Validar formato UUID
   const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
@@ -73,9 +74,7 @@ export async function GET(
     objetivos: objetivos as any[],
   }
 
-  const pdfBytes = await generateEduLarpPDF(data)
-
-  // Nombre del archivo seguro
+  const pdfBytes = await generateEduLarpPDF(data, lang)
   const safeName = data.nombre
     .replace(/[^a-zA-Z0-9áéíóúñÁÉÍÓÚÑ\s-]/g, '')
     .replace(/\s+/g, '_')
@@ -98,6 +97,8 @@ export async function POST(
 ) {
   const session = await getServerSession(authOptions)
   if (!session) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
+
+  const lang = (req.nextUrl.searchParams.get('lang') === 'en' ? 'en' : 'es') as 'es' | 'en'
 
   const body = await req.json().catch(() => null)
   if (!body?.larp) return NextResponse.json({ error: 'Datos inválidos' }, { status: 400 })
@@ -130,7 +131,7 @@ export async function POST(
     objetivos:        objetivos as any[],
   }
 
-  const pdfBytes = await generateEduLarpPDF(data)
+  const pdfBytes = await generateEduLarpPDF(data, lang)
   const safeName = (data.nombre ?? 'actividad')
     .replace(/[^a-zA-Z0-9áéíóúñÁÉÍÓÚÑ\s-]/g, '')
     .replace(/\s+/g, '_')
