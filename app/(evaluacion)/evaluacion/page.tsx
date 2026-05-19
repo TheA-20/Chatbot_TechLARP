@@ -5,16 +5,16 @@ import Image from 'next/image'
 
 export default function EvaluacionPage() {
   const router = useRouter()
-  const [docenteId, setDocenteId] = useState('')
+  const [nombre, setNombre] = useState('')
   const [error, setError] = useState('')
   const [cargando, setCargando] = useState(false)
 
   async function handleAcceso(e: React.FormEvent) {
     e.preventDefault()
     setError('')
-    const id = docenteId.trim()
-    if (!id) {
-      setError('Por favor, introduce el ID del docente.')
+    const n = nombre.trim()
+    if (!n || n.length < 2) {
+      setError('Introduce tu nombre (mínimo 2 caracteres).')
       return
     }
 
@@ -23,7 +23,7 @@ export default function EvaluacionPage() {
       const res = await fetch('/api/evaluacion/inicio', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ docente_id: id }),
+        body: JSON.stringify({ nombre: n }),
       })
       const data = await res.json()
 
@@ -32,8 +32,8 @@ export default function EvaluacionPage() {
         return
       }
 
-      // Guardar nombre del docente en sessionStorage para mostrarlo en el chat
       sessionStorage.setItem('eval_nombre', data.nombre ?? '')
+      sessionStorage.setItem('eval_retorno', data.esRetorno ? '1' : '0')
       router.push('/evaluacion/chat')
     } catch {
       setError('Error de conexión. Inténtalo de nuevo.')
@@ -45,38 +45,40 @@ export default function EvaluacionPage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-violet-50 to-purple-100 flex flex-col items-center justify-center px-4">
       <div className="w-full max-w-md bg-white rounded-2xl shadow-lg p-8">
-        {/* Logo */}
+
+        {/* Logo completo */}
         <div className="flex justify-center mb-6">
           <Image
-            src="/TechLARP_Symbol.png"
+            src="/TechLARP-logo-02.png"
             alt="TechLARP"
-            width={56}
-            height={56}
+            width={220}
+            height={55}
             className="object-contain"
+            priority
           />
         </div>
 
         <h1 className="text-2xl font-bold text-center text-gray-900 mb-1">
-          Evaluación del Asistente TechLARP
+          Evaluación del Asistente
         </h1>
         <p className="text-sm text-center text-gray-500 mb-8">
-          Introduce el ID que se te ha proporcionado para iniciar la sesión de evaluación.
+          Introduce tu nombre para iniciar o continuar tu sesión de evaluación.
         </p>
 
         <form onSubmit={handleAcceso} className="space-y-5">
           <div>
-            <label htmlFor="docente_id" className="block text-sm font-medium text-gray-700 mb-1">
-              ID del docente experto
+            <label htmlFor="nombre" className="block text-sm font-medium text-gray-700 mb-1">
+              Tu nombre
             </label>
             <input
-              id="docente_id"
+              id="nombre"
               type="text"
-              value={docenteId}
-              onChange={e => { setDocenteId(e.target.value); setError('') }}
-              placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
-              className="w-full px-4 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent font-mono"
+              value={nombre}
+              onChange={e => { setNombre(e.target.value); setError('') }}
+              placeholder="Ej: Ana García"
+              className="w-full px-4 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent"
               autoComplete="off"
-              spellCheck={false}
+              autoFocus
             />
           </div>
 
@@ -110,7 +112,6 @@ export default function EvaluacionPage() {
         </details>
       </div>
 
-      {/* Marca DEI */}
       <p className="mt-6 text-xs text-gray-400">Plataforma TechLARP · DEI Interactive Systems Group</p>
     </div>
   )

@@ -65,6 +65,31 @@ export default function EvaluacionChatPage() {
   useEffect(() => {
     const nombre = sessionStorage.getItem('eval_nombre') ?? ''
     setNombreDocente(nombre)
+
+    // Cargar historial si el evaluador ya tenía una sesión activa
+    async function cargarHistorial() {
+      try {
+        const res = await fetch('/api/evaluacion/historial')
+        if (!res.ok) return
+        const data = await res.json()
+        if (!data.mensajes?.length) return
+
+        const msgs: Mensaje[] = []
+        for (const m of data.mensajes) {
+          msgs.push({ role: 'user', content: m.mensaje_usuario })
+          if (m.respuesta_bot) {
+            const larps: LarpRef[] = Array.isArray(m.larps) ? m.larps : []
+            msgs.push({ role: 'assistant', content: m.respuesta_bot, larps })
+          }
+        }
+        setMensajes(msgs)
+        // Actualizar el escenario al último usado
+        const ultimoEscenario = data.mensajes[data.mensajes.length - 1]?.escenario ?? null
+        if (ultimoEscenario) setEscenario(ultimoEscenario)
+      } catch { /* silently fail */ }
+    }
+
+    cargarHistorial()
     inputRef.current?.focus()
   }, [])
 
