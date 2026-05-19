@@ -30,37 +30,37 @@ const ESCENARIOS_INFO = [
     id: null,
     key: 'libre',
     label: 'Sin escenario',
-    desc: 'ConversaciÃ³n libre sin objetivo asignado.',
+    desc: 'Conversacion libre sin objetivo asignado.',
   },
   {
     id: 1,
     key: '1',
-    label: 'E1 Â· SelecciÃ³n guiada',
-    desc: 'Busca una actividad para 5.Âº Primaria, MatemÃ¡ticas y participaciÃ³n femenina.',
+    label: 'E1 - Seleccion guiada',
+    desc: 'Busca una actividad para 5o Primaria, Matematicas y participacion femenina.',
   },
   {
     id: 2,
     key: '2',
-    label: 'E2 Â· AdaptaciÃ³n',
-    desc: 'Adapta una actividad de Secundaria para 6.Âº Primaria manteniendo el enfoque de inclusiÃ³n.',
+    label: 'E2 - Adaptacion',
+    desc: 'Adapta una actividad de Secundaria para 6o Primaria manteniendo el enfoque de inclusion.',
   },
   {
     id: 3,
     key: '3',
-    label: 'E3 Â· Apoyo formativo',
-    desc: 'Pide que el agente explique contenido tÃ©cnico fuera de tu dominio.',
+    label: 'E3 - Apoyo formativo',
+    desc: 'Pide que el agente explique contenido tecnico fuera de tu dominio.',
   },
   {
     id: 4,
     key: '4',
-    label: 'E4 Â· Fuera de alcance',
-    desc: 'Prueba los lÃ­mites del sistema con consultas probablemente fuera del repositorio.',
+    label: 'E4 - Fuera de alcance',
+    desc: 'Prueba los limites del sistema con consultas probablemente fuera del repositorio.',
   },
   {
     id: 5,
     key: '5',
-    label: 'E5 Â· ExploraciÃ³n libre',
-    desc: '~10 minutos de interacciÃ³n no guiada, como lo harÃ­a un docente real.',
+    label: 'E5 - Exploracion libre',
+    desc: '~10 minutos de interaccion no guiada, como lo haria un docente real.',
   },
 ]
 
@@ -94,7 +94,6 @@ export default function EvaluacionChatPage() {
     setPreviewEdits(p => ({ ...p, [key]: val }))
   }
 
-  // Carga todo el historial al montar y lo agrupa por escenario
   useEffect(() => {
     const nombre = sessionStorage.getItem('eval_nombre') ?? ''
     setNombreDocente(nombre)
@@ -105,7 +104,7 @@ export default function EvaluacionChatPage() {
         if (!res.ok) return
         const data = await res.json()
 
-        const grupos: Record<string, Mensaje[]>  = { libre: [], '1': [], '2': [], '3': [], '4': [], '5': [] }
+        const grupos: Record<string, Mensaje[]>   = { libre: [], '1': [], '2': [], '3': [], '4': [], '5': [] }
         const lrpGrupos: Record<string, LarpRef[]> = { libre: [], '1': [], '2': [], '3': [], '4': [], '5': [] }
 
         for (const m of data.mensajes ?? []) {
@@ -133,7 +132,6 @@ export default function EvaluacionChatPage() {
 
   useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: 'smooth' }) }, [mensajes])
 
-  // Cambia de escenario guardando la conversaciÃ³n actual en cachÃ©
   function cambiarEscenario(nuevoId: number | null) {
     if (nuevoId === escenario || cargando) return
     const currentKey = escenario === null ? 'libre' : String(escenario)
@@ -151,8 +149,8 @@ export default function EvaluacionChatPage() {
 
   async function reiniciarEscenario() {
     const key   = escenario === null ? 'libre' : String(escenario)
-    const label = ESCENARIOS_INFO.find(s => s.key === key)?.label ?? 'esta conversaciÃ³n'
-    if (!window.confirm(`Â¿Reiniciar "${label}"?\nSe borrarÃ¡n todos los mensajes de este escenario.`)) return
+    const label = ESCENARIOS_INFO.find(s => s.key === key)?.label ?? 'esta conversacion'
+    if (!window.confirm(`Reiniciar "${label}"?\nSe borraran todos los mensajes de este escenario.`)) return
 
     try {
       await fetch(`/api/evaluacion/historial?escenario=${key}`, { method: 'DELETE' })
@@ -162,6 +160,13 @@ export default function EvaluacionChatPage() {
     setLastLarps([])
     setHistorialCache(c => ({ ...c, [key]: [] }))
     setLastLarpsCache(c => ({ ...c, [key]: [] }))
+    setPreviewAbierto(false)
+  }
+
+  function salir() {
+    sessionStorage.removeItem('eval_nombre')
+    sessionStorage.removeItem('eval_retorno')
+    router.push('/evaluacion')
   }
 
   async function abrirPreview(id: string) {
@@ -189,7 +194,7 @@ export default function EvaluacionChatPage() {
       const url = URL.createObjectURL(blob)
       const a = document.createElement('a')
       a.href = url
-      a.download = `${nombre.replace(/[^a-zA-Z0-9Ã¡Ã©Ã­Ã³ÃºÃ±ÃÃ‰ÃÃ“ÃšÃ‘\s-]/g, '').replace(/\s+/g, '_')}_TechLARP.pdf`
+      a.download = `${nombre.replace(/[^a-zA-Z0-9 -]/g, '').replace(/\s+/g, '_')}_TechLARP.pdf`
       document.body.appendChild(a); a.click(); a.remove()
       URL.revokeObjectURL(url)
     } catch { /* silently fail */ }
@@ -216,7 +221,7 @@ export default function EvaluacionChatPage() {
       const url = URL.createObjectURL(blob)
       const a = document.createElement('a')
       a.href = url
-      a.download = `${previewData.larp.nombre.replace(/[^a-zA-Z0-9Ã¡Ã©Ã­Ã³ÃºÃ±ÃÃ‰ÃÃ“ÃšÃ‘\s-]/g, '').replace(/\s+/g, '_')}_modificada_TechLARP.pdf`
+      a.download = `${previewData.larp.nombre.replace(/[^a-zA-Z0-9 -]/g, '').replace(/\s+/g, '_')}_modificada_TechLARP.pdf`
       document.body.appendChild(a); a.click(); a.remove()
       URL.revokeObjectURL(url)
     } catch { /* silently fail */ }
@@ -262,7 +267,7 @@ export default function EvaluacionChatPage() {
         setMensajes(m => [...m, { role: 'assistant', content: data.error ?? 'Error al obtener respuesta.' }])
       }
     } catch {
-      setMensajes(m => [...m, { role: 'assistant', content: 'Error de conexiÃ³n. IntÃ©ntalo de nuevo.' }])
+      setMensajes(m => [...m, { role: 'assistant', content: 'Error de conexion. Intentalo de nuevo.' }])
     } finally {
       setCargando(false)
       inputRef.current?.focus()
@@ -274,7 +279,7 @@ export default function EvaluacionChatPage() {
   return (
     <div className="h-screen bg-[#f7f7f8] flex overflow-hidden">
 
-      {/* â”€â”€ SIDEBAR IZQUIERDO â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
+      {/* SIDEBAR IZQUIERDO */}
       <aside className="w-60 bg-white border-r border-gray-100 flex flex-col flex-shrink-0 z-20">
         {/* Logo + usuario */}
         <div className="px-4 py-4 border-b border-gray-100 flex items-center gap-2.5">
@@ -326,25 +331,52 @@ export default function EvaluacionChatPage() {
           })}
         </nav>
 
-        {/* BotÃ³n reiniciar */}
-        <div className="px-4 py-3 border-t border-gray-100">
+        {/* Botones inferiores */}
+        <div className="px-4 py-3 border-t border-gray-100 space-y-2">
           <button
             onClick={reiniciarEscenario}
             disabled={mensajes.length === 0 || cargando}
             className="w-full text-xs text-gray-400 hover:text-red-500 hover:bg-red-50 border border-gray-200 hover:border-red-200 disabled:opacity-40 disabled:cursor-not-allowed rounded-lg py-2 transition-colors"
           >
-            Reiniciar conversaciÃ³n
+            Reiniciar conversacion
+          </button>
+          <button
+            onClick={salir}
+            className="w-full text-xs text-gray-500 hover:text-gray-800 hover:bg-gray-100 border border-gray-200 hover:border-gray-300 rounded-lg py-2 transition-colors flex items-center justify-center gap-1.5"
+          >
+            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+            </svg>
+            Salir de la sesion
           </button>
         </div>
       </aside>
 
-      {/* â”€â”€ ÃREA DE CHAT â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
+      {/* AREA DE CHAT */}
       <div className={`flex flex-col flex-1 min-w-0 h-full transition-all duration-200 ${previewAbierto ? 'mr-[420px]' : ''}`}>
 
         {/* Header */}
-        <header className="bg-white border-b border-gray-100 px-5 py-3 flex-shrink-0">
-          <p className="text-sm font-semibold text-gray-900">{escenarioActual.label}</p>
-          <p className="text-xs text-gray-400 mt-0.5">{escenarioActual.desc}</p>
+        <header className="bg-white border-b border-gray-100 px-5 py-3 flex-shrink-0 flex items-center justify-between gap-4">
+          <div className="min-w-0">
+            <p className="text-sm font-semibold text-gray-900">{escenarioActual.label}</p>
+            <p className="text-xs text-gray-400 mt-0.5 truncate">{escenarioActual.desc}</p>
+          </div>
+          {lastLarps.length > 0 && (
+            <button
+              onClick={() => lastLarps[0] && abrirPreview(lastLarps[0].id)}
+              className={`flex-shrink-0 flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-lg border transition-colors ${
+                previewAbierto
+                  ? 'bg-violet-100 border-violet-300 text-violet-700'
+                  : 'bg-violet-50 border-violet-200 text-violet-600 hover:bg-violet-100'
+              }`}
+            >
+              <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+              </svg>
+              Vista previa
+            </button>
+          )}
         </header>
 
         {/* Mensajes */}
@@ -354,7 +386,7 @@ export default function EvaluacionChatPage() {
               <div className="space-y-5 pt-6">
                 <div className="text-center">
                   <p className="text-base font-medium text-gray-800 mb-1">
-                    Â¡Hola{nombreDocente ? `, ${nombreDocente}` : ''}!
+                    {nombreDocente ? `Hola, ${nombreDocente}!` : 'Hola!'}
                   </p>
                   <p className="text-sm text-gray-500 max-w-sm mx-auto">
                     {escenario === null
@@ -364,15 +396,15 @@ export default function EvaluacionChatPage() {
                 </div>
                 <div className="flex flex-col items-start">
                   <div className="max-w-[85%] rounded-2xl rounded-bl-sm px-4 py-3 text-sm leading-relaxed bg-white border border-gray-100 text-gray-800">
-                    Hola, soy el Asistente TechLARP. Estoy aquÃ­ para ayudarte a encontrar, entender o adaptar actividades TechLARP. Â¿Por dÃ³nde empezamos?
+                    Hola, soy el Asistente TechLARP. Estoy aqui para ayudarte a encontrar, entender o adaptar actividades TechLARP. Por donde empezamos?
                   </div>
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   {[
-                    'Busco una actividad de MatemÃ¡ticas para 5.Âº de Primaria',
-                    'Quiero adaptar una actividad de Secundaria para 6.Âº de Primaria',
-                    'ExplÃ­came quÃ© es el pensamiento computacional',
-                    'MuÃ©strame quÃ© actividades hay disponibles',
+                    'Busco una actividad de Matematicas para 5o de Primaria',
+                    'Quiero adaptar una actividad de Secundaria para 6o de Primaria',
+                    'Explicame que es el pensamiento computacional',
+                    'Muestrame que actividades hay disponibles',
                   ].map((s, i) => (
                     <button key={i} onClick={() => enviar(s)}
                       className="text-left text-xs text-gray-600 bg-white border border-gray-100 rounded-xl p-3 hover:border-violet-300 hover:bg-violet-50/30 transition-colors">
@@ -410,7 +442,7 @@ export default function EvaluacionChatPage() {
                       )}
                     </div>
 
-                    {/* Botones de actividades */}
+                    {/* Botones de actividades por mensaje */}
                     {m.role === 'assistant' && m.larps && m.larps.length > 0 && (
                       <div className="flex flex-wrap gap-2 mt-2 max-w-[80%]">
                         {m.larps.map(l => (
@@ -427,7 +459,7 @@ export default function EvaluacionChatPage() {
                               title="Descargar PDF"
                               className="text-xs bg-white hover:bg-gray-50 text-gray-500 border border-gray-200 rounded-lg px-2 py-1.5 transition-colors disabled:opacity-50"
                             >
-                              {downloading === l.id ? 'â€¦' : 'â¬‡'}
+                              {downloading === l.id ? '...' : 'PDF'}
                             </button>
                           </div>
                         ))}
@@ -464,7 +496,7 @@ export default function EvaluacionChatPage() {
                 value={input}
                 onChange={e => setInput(e.target.value)}
                 onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); enviar() } }}
-                placeholder="Escribe tu mensajeâ€¦"
+                placeholder="Escribe tu mensaje..."
                 className="flex-1 bg-transparent text-sm text-gray-800 placeholder-gray-400 resize-none outline-none"
                 disabled={cargando}
               />
@@ -482,7 +514,7 @@ export default function EvaluacionChatPage() {
         </div>
       </div>
 
-      {/* â”€â”€ PANEL DE VISTA PREVIA â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
+      {/* PANEL DE VISTA PREVIA */}
       {previewAbierto && (
         <aside className="fixed right-0 top-0 bottom-0 w-[420px] bg-white border-l border-gray-200 overflow-y-auto z-30 flex flex-col">
           <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between flex-shrink-0">
@@ -500,7 +532,6 @@ export default function EvaluacionChatPage() {
             </div>
           ) : previewData ? (
             <div className="flex-1 overflow-y-auto">
-              {/* Tabs */}
               <div className="flex border-b border-gray-100 px-5 gap-4">
                 {(['resumen', 'misiones', 'roles', 'cartas'] as const).map(tab => (
                   <button key={tab} onClick={() => setPreviewTab(tab)}
@@ -521,7 +552,7 @@ export default function EvaluacionChatPage() {
                     </div>
                     <p className="text-gray-600 text-xs leading-relaxed">{previewData.larp.asignaturas}</p>
                     <div>
-                      <p className="text-xs font-medium text-gray-700 mb-1">DescripciÃ³n</p>
+                      <p className="text-xs font-medium text-gray-700 mb-1">Descripcion</p>
                       {editingField === 'larp|descripcion' ? (
                         <textarea
                           className="w-full text-xs border border-violet-300 rounded-lg p-2 resize-none focus:outline-none focus:ring-1 focus:ring-violet-500"
@@ -542,12 +573,12 @@ export default function EvaluacionChatPage() {
                     </div>
                     {previewData.paralelos.length > 0 && (
                       <div>
-                        <p className="text-xs font-medium text-gray-700 mb-2">Paralelos narrativa â†” mundo real</p>
+                        <p className="text-xs font-medium text-gray-700 mb-2">Paralelos narrativa vs mundo real</p>
                         <div className="space-y-2">
                           {previewData.paralelos.map((p, i) => (
                             <div key={i} className="bg-gray-50 rounded-lg p-2 text-xs">
                               <span className="font-medium text-violet-700">{p.narrativa}</span>
-                              <span className="text-gray-400 mx-1">â†”</span>
+                              <span className="text-gray-400 mx-1">vs</span>
                               <span className="text-gray-600">{p.mundo_real}</span>
                             </div>
                           ))}
@@ -560,7 +591,7 @@ export default function EvaluacionChatPage() {
                         <ul className="space-y-1">
                           {previewData.objetivos.map((o, i) => (
                             <li key={i} className="text-xs text-gray-600 flex gap-2">
-                              <span className="text-violet-400 flex-shrink-0">Â·</span>
+                              <span className="text-violet-400 flex-shrink-0">-</span>
                               <span>[{o.tipo}] {o.descripcion}</span>
                             </li>
                           ))}
@@ -619,14 +650,13 @@ export default function EvaluacionChatPage() {
                 )}
               </div>
 
-              {/* Botones PDF */}
               <div className="px-5 py-4 border-t border-gray-100 flex gap-2 flex-shrink-0">
                 <button
                   onClick={() => previewLarpId && handleDownloadPDF(previewLarpId, previewData.larp.nombre)}
                   disabled={!!downloading}
                   className="flex-1 text-xs bg-violet-600 hover:bg-violet-700 text-white rounded-lg py-2 transition-colors disabled:opacity-50"
                 >
-                  {downloading === previewLarpId ? 'Descargandoâ€¦' : 'Descargar PDF original'}
+                  {downloading === previewLarpId ? 'Descargando...' : 'Descargar PDF original'}
                 </button>
                 {Object.keys(previewEdits).length > 0 && (
                   <button
