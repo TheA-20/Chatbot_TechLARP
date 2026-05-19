@@ -334,6 +334,20 @@ export default function EvaluacionChatPage() {
 
         {/* Botones inferiores */}
         <div className="px-4 py-3 border-t border-gray-100 space-y-2">
+          {/* Selector idioma PDF */}
+          <div className="flex items-center justify-between text-xs text-gray-400 pb-1">
+            <span>Idioma del PDF</span>
+            <div className="flex gap-1">
+              <button
+                onClick={() => setPdfLang('es')}
+                className={`px-2.5 py-1 rounded border transition-colors ${pdfLang === 'es' ? 'bg-violet-600 text-white border-violet-600' : 'bg-white text-gray-500 border-gray-200 hover:bg-gray-50'}`}
+              >ES</button>
+              <button
+                onClick={() => setPdfLang('en')}
+                className={`px-2.5 py-1 rounded border transition-colors ${pdfLang === 'en' ? 'bg-violet-600 text-white border-violet-600' : 'bg-white text-gray-500 border-gray-200 hover:bg-gray-50'}`}
+              >EN</button>
+            </div>
+          </div>
           <button
             onClick={reiniciarEscenario}
             disabled={mensajes.length === 0 || cargando}
@@ -652,16 +666,6 @@ export default function EvaluacionChatPage() {
               </div>
 
               <div className="px-5 py-4 border-t border-gray-100 flex flex-col gap-2 flex-shrink-0">
-                <div className="flex gap-1 justify-end">
-                  <button
-                    onClick={() => setPdfLang('es')}
-                    className={`text-xs px-2 py-1 rounded border transition-colors ${pdfLang === 'es' ? 'bg-violet-600 text-white border-violet-600' : 'bg-white text-gray-500 border-gray-200 hover:bg-gray-50'}`}
-                  >ES</button>
-                  <button
-                    onClick={() => setPdfLang('en')}
-                    className={`text-xs px-2 py-1 rounded border transition-colors ${pdfLang === 'en' ? 'bg-violet-600 text-white border-violet-600' : 'bg-white text-gray-500 border-gray-200 hover:bg-gray-50'}`}
-                  >EN</button>
-                </div>
                 <div className="flex gap-2">
                 <button
                   onClick={() => previewLarpId && handleDownloadPDF(previewLarpId, previewData.larp.nombre)}
