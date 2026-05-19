@@ -84,7 +84,7 @@ export default function ChatPage() {
   // Auto-focus después de recibir respuesta
   useEffect(() => {
     if (!cargando && mensajes.length > 0) {
-      inputRef.current?.focus()
+      setTimeout(() => inputRef.current?.focus(), 80)
     }
   }, [cargando, mensajes.length])
   
@@ -229,6 +229,7 @@ export default function ChatPage() {
       setMensajes(m => [...m, { role: 'assistant', content: t.chatError }])
     } finally {
       setCargando(false)
+      setTimeout(() => inputRef.current?.focus(), 80)
     }
   }
 

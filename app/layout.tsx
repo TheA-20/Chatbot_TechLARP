@@ -3,12 +3,14 @@ import Image from 'next/image'
 import './globals.css'
 import { Providers } from './providers'
 
+const subpath = process.env.NEXT_PUBLIC_BASE_PATH ?? ''
+
 export const metadata: Metadata = {
   title:       'TechLARP — Plataforma de actividades educativas',
   description: 'Plataforma de gestión, recomendación y personalización de actividades TechLARP para educadores STEM',
   icons: {
-    icon: '/TechLARP_Symbol.png',
-    apple: '/TechLARP_Symbol.png',
+    icon: `${subpath}/TechLARP_Symbol.png`,
+    apple: `${subpath}/TechLARP_Symbol.png`,
   },
 }
 
