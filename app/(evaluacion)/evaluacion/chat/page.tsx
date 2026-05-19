@@ -5,6 +5,7 @@ import Image from 'next/image'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import { evalDict, type EvalLocale } from '@/lib/i18n/eval-dict'
+import { bp } from '@/lib/base-path'
 
 interface LarpRef {
   id: string
@@ -77,7 +78,7 @@ export default function EvaluacionChatPage() {
 
     async function cargarHistorial() {
       try {
-        const res = await fetch('/api/evaluacion/historial')
+        const res = await fetch(`${bp}/api/evaluacion/historial`)
         if (!res.ok) return
         const data = await res.json()
 
@@ -130,7 +131,7 @@ export default function EvaluacionChatPage() {
     if (!window.confirm(evalDict[lang].resetConfirm(label))) return
 
     try {
-      await fetch(`/api/evaluacion/historial?escenario=${key}`, { method: 'DELETE' })
+      await fetch(`${bp}/api/evaluacion/historial?escenario=${key}`, { method: 'DELETE' })
     } catch { /* fail silently */ }
 
     setMensajes([])
@@ -156,7 +157,7 @@ export default function EvaluacionChatPage() {
     setPreviewData(null)
     setPreviewCargando(true)
     try {
-      const res = await fetch(`/api/evaluacion/edularp/${id}`)
+      const res = await fetch(`${bp}/api/evaluacion/edularp/${id}`)
       if (res.ok) setPreviewData(await res.json())
     } catch { /* silently fail */ }
     setPreviewCargando(false)
@@ -165,7 +166,7 @@ export default function EvaluacionChatPage() {
   async function handleDownloadPDF(id: string, nombre: string) {
     setDownloading(id)
     try {
-      const res = await fetch(`/api/evaluacion/edularp/${id}/pdf?lang=${lang}`)
+      const res = await fetch(`${bp}/api/evaluacion/edularp/${id}/pdf?lang=${lang}`)
       if (!res.ok) throw new Error('Error')
       const blob = await res.blob()
       const url = URL.createObjectURL(blob)
@@ -188,7 +189,7 @@ export default function EvaluacionChatPage() {
         if (parts.length === 2) { (modified as any)[parts[0]][parts[1]] = val }
         else if (parts.length === 3) { (modified as any)[parts[0]][parseInt(parts[1])][parts[2]] = val }
       }
-      const res = await fetch(`/api/evaluacion/edularp/${previewLarpId}/pdf?lang=${lang}`, {
+      const res = await fetch(`${bp}/api/evaluacion/edularp/${previewLarpId}/pdf?lang=${lang}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(modified),
@@ -214,7 +215,7 @@ export default function EvaluacionChatPage() {
     setCargando(true)
 
     try {
-      const res = await fetch('/api/evaluacion/chat', {
+      const res = await fetch(`${bp}/api/evaluacion/chat`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

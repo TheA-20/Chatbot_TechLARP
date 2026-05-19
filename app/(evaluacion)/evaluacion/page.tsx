@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Image from 'next/image'
 import { evalDict, type EvalLocale } from '@/lib/i18n/eval-dict'
+import { bp } from '@/lib/base-path'
 
 export default function EvaluacionPage() {
   const router = useRouter()
@@ -34,7 +35,7 @@ export default function EvaluacionPage() {
 
     setCargando(true)
     try {
-      const res = await fetch('/api/evaluacion/inicio', {
+      const res = await fetch(`${bp}/api/evaluacion/inicio`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ nombre: n }),

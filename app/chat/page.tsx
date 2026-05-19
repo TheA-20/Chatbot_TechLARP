@@ -8,6 +8,7 @@ import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import { useI18n } from '@/lib/i18n/context'
 import { LanguageSwitcher } from '@/app/components/LanguageSwitcher'
+import { bp } from '@/lib/base-path'
 
 interface LarpRef {
   id: string
@@ -90,7 +91,7 @@ export default function ChatPage() {
   // Cargar historial
   async function cargarHistorial() {
     try {
-      const res = await fetch('/api/chat/history')
+      const res = await fetch(`${bp}/api/chat/history`)
       if (res.ok) {
         const data = await res.json()
         setHistorial(data.historial)
@@ -121,8 +122,7 @@ export default function ChatPage() {
     setPreviewData(null)
     setPreviewCargando(true)
     try {
-      const res = await fetch(`/api/edularp/${id}`)
-      if (res.ok) setPreviewData(await res.json())
+      const res = await fetch(`${bp}/api/edularp/${id}`)
     } catch { /* silently fail */ }
     setPreviewCargando(false)
   }
@@ -130,7 +130,7 @@ export default function ChatPage() {
   async function handleDownloadPDF(id: string, nombre: string) {
     setDownloading(id)
     try {
-      const res = await fetch(`/api/edularp/${id}/pdf?lang=${pdfLang}`)
+      const res = await fetch(`${bp}/api/edularp/${id}/pdf?lang=${pdfLang}`)
       if (!res.ok) throw new Error('Error')
       const blob = await res.blob()
       const url = URL.createObjectURL(blob)
@@ -159,7 +159,7 @@ export default function ChatPage() {
           ;(modified as any)[parts[0]][parseInt(parts[1])][parts[2]] = val
         }
       }
-      const res = await fetch(`/api/edularp/${previewLarpId}/pdf?lang=${pdfLang}`, {
+      const res = await fetch(`${bp}/api/edularp/${previewLarpId}/pdf?lang=${pdfLang}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(modified),
@@ -188,7 +188,7 @@ export default function ChatPage() {
     setCargando(true)
 
     try {
-      const res = await fetch('/api/chat', {
+      const res = await fetch(`${bp}/api/chat`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -262,7 +262,7 @@ export default function ChatPage() {
     
     // Cargar todos los mensajes de esta sesión
     try {
-      const res = await fetch(`/api/chat/session/${sesion.sessionId}`)
+      const res = await fetch(`${bp}/api/chat/session/${sesion.sessionId}`)
       if (res.ok) {
         const data = await res.json()
         const mensajesCargados: Mensaje[] = []

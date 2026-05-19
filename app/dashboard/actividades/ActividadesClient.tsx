@@ -4,6 +4,7 @@ import Link from 'next/link'
 import Image from 'next/image'
 import { useI18n } from '@/lib/i18n/context'
 import { LanguageSwitcher } from '@/app/components/LanguageSwitcher'
+import { bp } from '@/lib/base-path'
 
 interface Props {
   larps: any[]
@@ -20,7 +21,7 @@ export default function ActividadesClient({ larps, isAdmin, userId }: Props) {
   async function handleDownloadPDF(id: string, nombre: string) {
     setDownloading(id)
     try {
-      const res = await fetch(`/api/edularp/${id}/pdf`)
+      const res = await fetch(`${bp}/api/edularp/${id}/pdf`)
       if (!res.ok) throw new Error('Error')
       const blob = await res.blob()
       const url = URL.createObjectURL(blob)
@@ -40,7 +41,7 @@ export default function ActividadesClient({ larps, isAdmin, userId }: Props) {
     setTranslating(id)
     setTranslateSuccess(null)
     try {
-      const res = await fetch(`/api/edularp/${id}/translate`, {
+      const res = await fetch(`${bp}/api/edularp/${id}/translate`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ targetLocale }),

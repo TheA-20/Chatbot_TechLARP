@@ -9,6 +9,7 @@ import Link from 'next/link'
 import { useI18n } from '@/lib/i18n/context'
 import Image from 'next/image'
 import { LanguageSwitcher } from '@/app/components/LanguageSwitcher'
+import { bp } from '@/lib/base-path'
 
 const AI_PROMPT_ES = `Actúa como una docente experta en educación STEM con amplia experiencia en pedagogía inclusiva y diseño de actividades de juego de rol educativo (LARP). Conoces profundamente la metodología TechLARP: una práctica pedagógica que combina narrativa fantástica inmersiva con aprendizaje curricular STEM real mediante juego de rol en vivo. Las y los estudiantes asumen personajes con habilidades especiales y resuelven misiones que conectan la ficción con ciencias, tecnología, ingeniería o matemáticas.
 
@@ -281,7 +282,7 @@ export default function FormularioPage() {
     try {
       const fd = new FormData()
       fd.append('file', file)
-      const res = await fetch('/api/upload', { method: 'POST', body: fd })
+      const res = await fetch(`${bp}/api/upload`, { method: 'POST', body: fd })
       if (!res.ok) { const d = await res.json(); setUploadError(d.error ?? t.imageUploadError); return }
       const { url } = await res.json()
       const current = getValues('imagenes_urls') ?? []
@@ -328,7 +329,7 @@ export default function FormularioPage() {
         status: 'borrador',
         inclusion_index: { designer: inclusionIndex, rubric_version: '1.0' },
       }
-      const res = await fetch('/api/edularp', {
+      const res = await fetch(`${bp}/api/edularp`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),

@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation'
 import { useI18n } from '@/lib/i18n/context'
 import Image from 'next/image'
 import { LanguageSwitcher } from '@/app/components/LanguageSwitcher'
+import { bp } from '@/lib/base-path'
 
 export default function RegistroPage() {
   const router  = useRouter()
@@ -22,7 +23,7 @@ export default function RegistroPage() {
     if (form.password.length < 8) { setError(t.passwordTooShort); return }
 
     setLoading(true)
-    const res = await fetch('/api/admin/usuarios', {
+    const res = await fetch(`${bp}/api/admin/usuarios`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ nombre: form.nombre, email: form.email, password: form.password }),

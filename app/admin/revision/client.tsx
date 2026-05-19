@@ -3,6 +3,7 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import Image from 'next/image'
+import { bp } from '@/lib/base-path'
 
 type Seccion = 'revision' | 'docentes'
 
@@ -19,7 +20,7 @@ export default function AdminRevisionClient({ pendientes, docentes, stats }: any
   async function openPreview(id: string) {
     setLoadingPreview(true)
     try {
-      const res = await fetch(`/api/edularp/${id}`)
+      const res = await fetch(`${bp}/api/edularp/${id}`)
       const data = await res.json()
       setPreview(data)
       setFeedback('')
@@ -30,7 +31,7 @@ export default function AdminRevisionClient({ pendientes, docentes, stats }: any
 
   async function aprobar(id: string, fb = '') {
     setLoading(true)
-    await fetch('/api/admin/aprobar', {
+    await fetch(`${bp}/api/admin/aprobar`, {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ edularp_id: id, feedback: fb }),
     })
@@ -40,7 +41,7 @@ export default function AdminRevisionClient({ pendientes, docentes, stats }: any
   async function rechazar(id: string, m: string) {
     if (!m.trim()) return
     setLoading(true)
-    await fetch('/api/admin/rechazar', {
+    await fetch(`${bp}/api/admin/rechazar`, {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ edularp_id: id, motivo: m }),
     })
@@ -49,7 +50,7 @@ export default function AdminRevisionClient({ pendientes, docentes, stats }: any
 
   async function toggleDocente(id: string, estadoActual: string) {
     const nuevoEstado = estadoActual === 'activo' ? 'suspendido' : 'activo'
-    await fetch('/api/admin/usuarios', {
+    await fetch(`${bp}/api/admin/usuarios`, {
       method: 'PATCH', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ usuario_id: id, estado: nuevoEstado }),
     })
@@ -57,7 +58,7 @@ export default function AdminRevisionClient({ pendientes, docentes, stats }: any
   }
 
   async function aprobarDocente(id: string) {
-    await fetch('/api/admin/usuarios', {
+    await fetch(`${bp}/api/admin/usuarios`, {
       method: 'PATCH', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ usuario_id: id, estado: 'activo' }),
     })
