@@ -428,10 +428,25 @@ export default function EvaluacionChatPage() {
                           components={{
                             p:      ({ children }) => <p className="mb-2 last:mb-0">{children}</p>,
                             strong: ({ children }) => <strong className="font-semibold">{children}</strong>,
-                            ul:     ({ children }) => <ul className="list-disc list-inside space-y-1 my-2">{children}</ul>,
-                            ol:     ({ children }) => <ol className="list-decimal list-inside space-y-1 my-2">{children}</ol>,
-                            li:     ({ children }) => <li className="text-sm">{children}</li>,
-                            h3:     ({ children }) => <h3 className="font-semibold text-sm mt-3 mb-1">{children}</h3>,
+                            em:     ({ children }) => <em className="italic">{children}</em>,
+                            ul:     ({ children }) => <ul className="list-disc pl-4 mb-2 space-y-1">{children}</ul>,
+                            ol:     ({ children }) => <ol className="list-decimal pl-4 mb-2 space-y-1">{children}</ol>,
+                            li:     ({ children }) => <li className="leading-relaxed">{children}</li>,
+                            h1:     ({ children }) => <h1 className="font-bold text-base mb-1 mt-2">{children}</h1>,
+                            h2:     ({ children }) => <h2 className="font-semibold text-sm mb-1 mt-2">{children}</h2>,
+                            h3:     ({ children }) => <h3 className="font-semibold text-sm mb-1 mt-1">{children}</h3>,
+                            code:   ({ children }) => <code className="bg-gray-100 rounded px-1 py-0.5 text-xs font-mono">{children}</code>,
+                            hr:     () => <hr className="my-2 border-gray-200" />,
+                            table:  ({ children }) => (
+                              <div className="overflow-x-auto my-2">
+                                <table className="text-xs border-collapse w-full">{children}</table>
+                              </div>
+                            ),
+                            thead:  ({ children }) => <thead className="bg-purple-50">{children}</thead>,
+                            tbody:  ({ children }) => <tbody>{children}</tbody>,
+                            tr:     ({ children }) => <tr className="border-b border-gray-100">{children}</tr>,
+                            th:     ({ children }) => <th className="px-3 py-2 text-left font-semibold text-gray-700 border border-gray-200">{children}</th>,
+                            td:     ({ children }) => <td className="px-3 py-2 text-gray-600 border border-gray-200">{children}</td>,
                           }}
                         >
                           {m.content}
