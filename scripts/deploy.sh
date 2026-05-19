@@ -55,6 +55,10 @@ ssh "$SERVER_USER@$SERVER_IP" bash << 'REMOTE_SCRIPT'
   echo "  → Compilando Next.js..."
   NODE_ENV=production npm run build
 
+  echo "  → Copiando archivos estáticos al directorio standalone..."
+  cp -r .next/static .next/standalone/.next/static
+  cp -r public .next/standalone/public
+
   echo "  → Creando directorio de logs..."
   mkdir -p logs
   mkdir -p public/uploads
