@@ -188,7 +188,7 @@ export default function EvaluacionChatPage() {
   async function handleDownloadPDF(id: string, nombre: string) {
     setDownloading(id)
     try {
-      const res = await fetch(`/api/edularp/${id}/pdf`)
+      const res = await fetch(`/api/evaluacion/edularp/${id}/pdf`)
       if (!res.ok) throw new Error('Error')
       const blob = await res.blob()
       const url = URL.createObjectURL(blob)
@@ -211,7 +211,7 @@ export default function EvaluacionChatPage() {
         if (parts.length === 2) { (modified as any)[parts[0]][parts[1]] = val }
         else if (parts.length === 3) { (modified as any)[parts[0]][parseInt(parts[1])][parts[2]] = val }
       }
-      const res = await fetch(`/api/edularp/${previewLarpId}/pdf`, {
+      const res = await fetch(`/api/evaluacion/edularp/${previewLarpId}/pdf`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(modified),
@@ -401,10 +401,10 @@ export default function EvaluacionChatPage() {
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   {[
-                    'Busco una actividad de Matematicas para 5o de Primaria',
-                    'Quiero adaptar una actividad de Secundaria para 6o de Primaria',
-                    'Explicame que es el pensamiento computacional',
-                    'Muestrame que actividades hay disponibles',
+                    'Busco una actividad para mi clase',
+                    'Quiero adaptar una actividad a mi grupo',
+                    'Explicame como funciona una actividad TechLARP',
+                    'Que actividades hay disponibles',
                   ].map((s, i) => (
                     <button key={i} onClick={() => enviar(s)}
                       className="text-left text-xs text-gray-600 bg-white border border-gray-100 rounded-xl p-3 hover:border-violet-300 hover:bg-violet-50/30 transition-colors">
