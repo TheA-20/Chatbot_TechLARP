@@ -38,5 +38,6 @@ export async function POST(req: NextRequest) {
   const bytes = await file.arrayBuffer()
   await writeFile(join(uploadsDir, filename), Buffer.from(bytes))
 
-  return NextResponse.json({ url: `/uploads/${filename}` })
+  const basePath = process.env.NEXT_PUBLIC_BASE_PATH ?? ''
+  return NextResponse.json({ url: `${basePath}/uploads/${filename}` })
 }

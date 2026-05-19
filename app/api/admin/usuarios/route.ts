@@ -28,6 +28,14 @@ export async function GET() {
 export async function POST(req: NextRequest) {
   const { nombre, email, password, desde_admin } = await req.json()
 
+  // Only admins may create accounts in active state directly
+  if (desde_admin) {
+    const session = await getServerSession(authOptions)
+    if (!session || (session.user as any).rol !== 'admin') {
+      return NextResponse.json({ error: 'Sin permisos' }, { status: 403 })
+    }
+  }
+
   const existe = await sql`SELECT id FROM usuarios WHERE email = ${email}`
   if (existe.length > 0) {
     return NextResponse.json({ error: 'El email ya está registrado' }, { status: 409 })

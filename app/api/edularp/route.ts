@@ -141,9 +141,10 @@ export async function POST(req: NextRequest) {
 async function analizarConLLM(edularpId: string, _data: unknown): Promise<void> {
   try {
     const baseUrl = process.env.NEXTAUTH_URL ?? 'http://localhost:3000'
-    await fetch(`${baseUrl}/api/edularp/${edularpId}/analyze`, {
+    const subpath = process.env.NEXT_PUBLIC_BASE_PATH ?? ''
+    await fetch(`${baseUrl}${subpath}/api/edularp/${edularpId}/analyze`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'x-internal': 'true' },
+      headers: { 'Content-Type': 'application/json', 'x-internal-token': process.env.INTERNAL_API_SECRET ?? '' },
     })
   } catch (err) {
     console.error('[analizarConLLM] Error calling analyze endpoint:', err)

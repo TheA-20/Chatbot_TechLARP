@@ -53,10 +53,11 @@ export async function POST(
   req: NextRequest,
   { params }: { params: { id: string } }
 ) {
-  // Allow internal calls (from fire-and-forget) or admin calls
-  const internalHeader = req.headers.get('x-internal')
-  if (internalHeader !== 'true') {
-    // For non-internal calls, require admin session
+  // Allow internal server-to-server calls (validated by secret token) or admin session
+  const internalHeader = req.headers.get('x-internal-token')
+  const internalSecret = process.env.INTERNAL_API_SECRET
+  const isInternalCall = internalSecret && internalHeader === internalSecret
+  if (!isInternalCall) {
     const { getServerSession } = await import('next-auth')
     const { authOptions } = await import('@/lib/auth')
     const session = await getServerSession(authOptions)

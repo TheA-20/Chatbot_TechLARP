@@ -564,6 +564,12 @@ const dict = {
     removeImage: 'Remove',
 
     // Step 6 — Inclusion Index
+    iiStepTitle: 'Inclusion Index',
+    iiStepSubtitle: 'Evaluate the 5 design criteria of the Gender Inclusion Index v1.0. The other 22 will be proposed by AI and validated by the team before publishing.',
+    iiStatusLabel: 'LARP Status',
+    iiStatusOptions: ['draft', 'pilot', 'validated'],
+    iiStatusLabels: ['Draft — in design', 'Pilot — tested', 'Validated — post-pilot documented'],
+    iiRequired: 'required',
     iiCumpleLabel: 'Met',
     iiParcialLabel: 'Partial',
     iiNoCumpleLabel: 'Not met',
