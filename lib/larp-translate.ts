@@ -6,6 +6,32 @@ function isRateLimit(err: any): boolean {
   return err?.status === 429 || err?.error?.code === 'rate_limit_exceeded'
 }
 
+async function callOllama(systemPrompt: string, payload: any): Promise<any> {
+  const ollamaUrl = process.env.OLLAMA_URL ?? 'http://localhost:11434'
+  const model     = process.env.OLLAMA_CHAT_MODEL ?? 'llama3.2'
+  const res = await fetch(`${ollamaUrl}/v1/chat/completions`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ollama' },
+    body: JSON.stringify({
+      model,
+      messages: [
+        { role: 'system', content: systemPrompt },
+        { role: 'user',   content: JSON.stringify(payload) },
+      ],
+      temperature: 0.1,
+      max_tokens: 8192,
+      stream: false,
+    }),
+    signal: AbortSignal.timeout(120_000),
+  })
+  if (!res.ok) throw new Error(`Ollama error ${res.status}`)
+  const data = await res.json()
+  const content = data.choices?.[0]?.message?.content ?? '{}'
+  // Strip markdown code fences if present
+  const clean = content.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/, '').trim()
+  return JSON.parse(clean)
+}
+
 async function callGroq(systemPrompt: string, payload: any): Promise<any> {
   const params = {
     temperature: 0.1,
@@ -21,7 +47,14 @@ async function callGroq(systemPrompt: string, payload: any): Promise<any> {
     completion = await groq.chat.completions.create({ model: 'llama-3.3-70b-versatile', ...params })
   } catch (err: any) {
     if (!isRateLimit(err)) throw err
-    completion = await groq.chat.completions.create({ model: 'llama-3.1-8b-instant', ...params })
+    try {
+      completion = await groq.chat.completions.create({ model: 'llama-3.1-8b-instant', ...params })
+    } catch (err2: any) {
+      if (!isRateLimit(err2)) throw err2
+      // Both Groq models rate-limited — fall back to local Ollama
+      console.warn('[translateLarpInMemory] All Groq models rate-limited, falling back to Ollama')
+      return callOllama(params.messages[0].content, JSON.parse(params.messages[1].content))
+    }
   }
   return JSON.parse(completion.choices[0].message.content ?? '{}')
 }

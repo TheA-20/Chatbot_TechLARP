@@ -26,7 +26,7 @@ export const evalDict = {
 
     // Chat — sidebar
     sidebarScenarios: 'Escenarios',
-    sidebarPdfLang: 'Idioma del PDF',
+    sidebarPdfLang: 'Idioma',
     sidebarReset: 'Reiniciar conversacion',
     sidebarLeave: 'Salir de la sesion',
 
@@ -104,7 +104,7 @@ export const evalDict = {
 
     // Chat — sidebar
     sidebarScenarios: 'Scenarios',
-    sidebarPdfLang: 'PDF language',
+    sidebarPdfLang: 'Language',
     sidebarReset: 'Reset conversation',
     sidebarLeave: 'Leave session',
 
