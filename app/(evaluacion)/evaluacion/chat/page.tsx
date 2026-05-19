@@ -157,7 +157,7 @@ export default function EvaluacionChatPage() {
     setPreviewData(null)
     setPreviewCargando(true)
     try {
-      const res = await fetch(`${bp}/api/evaluacion/edularp/${id}`)
+      const res = await fetch(`${bp}/api/evaluacion/edularp/${id}?lang=${lang}`)
       if (res.ok) setPreviewData(await res.json())
     } catch { /* silently fail */ }
     setPreviewCargando(false)

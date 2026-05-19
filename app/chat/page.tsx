@@ -122,7 +122,7 @@ export default function ChatPage() {
     setPreviewData(null)
     setPreviewCargando(true)
     try {
-      const res = await fetch(`${bp}/api/edularp/${id}`)
+      const res = await fetch(`${bp}/api/edularp/${id}?lang=${locale}`)
     } catch { /* silently fail */ }
     setPreviewCargando(false)
   }
