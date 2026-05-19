@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import sql from '@/lib/db'
+import { translateLarpInMemory } from '@/lib/larp-translate'
 
 export async function GET(req: NextRequest, { params }: { params: { id: string } }) {
   const token = req.cookies.get('eval_token')?.value
@@ -49,6 +50,14 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
   if (resolvedId !== params.id) {
     const [translatedLarp] = await sql`SELECT * FROM edularp WHERE id = ${resolvedId}`
     if (translatedLarp) larpData = { ...translatedLarp, _translated_from: params.id }
+  }
+
+  // No saved translation found — translate on the fly (not persisted)
+  if (resolvedId === params.id && larp.idioma_original !== lang) {
+    const result = await translateLarpInMemory(
+      larp, { paralelos, misiones, roles, cartas, objetivos }, lang as 'es' | 'en'
+    )
+    return NextResponse.json(result)
   }
 
   return NextResponse.json({ larp: larpData, paralelos, misiones, roles, cartas, objetivos })

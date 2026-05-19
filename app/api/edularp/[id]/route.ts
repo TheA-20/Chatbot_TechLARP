@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import sql from '@/lib/db'
+import { translateLarpInMemory } from '@/lib/larp-translate'
 
 export async function GET(_req: NextRequest, { params }: { params: { id: string } }) {
   const session = await getServerSession(authOptions)
@@ -53,6 +54,14 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
       WHERE e.id = ${resolvedId}
     `
     if (translatedLarp) larpData = { ...translatedLarp, _translated_from: params.id }
+  }
+
+  // No saved translation found — translate on the fly (not persisted)
+  if (resolvedId === params.id && larp.idioma_original !== lang) {
+    const result = await translateLarpInMemory(
+      larp, { paralelos, misiones, roles, cartas, objetivos }, lang as 'es' | 'en'
+    )
+    return NextResponse.json(result)
   }
 
   return NextResponse.json({ larp: larpData, paralelos, misiones, roles, cartas, objetivos })
