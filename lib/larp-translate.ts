@@ -32,7 +32,7 @@ async function callOllama(systemPrompt: string, payload: any): Promise<any> {
   return JSON.parse(clean)
 }
 
-async function callGroq(systemPrompt: string, payload: any): Promise<any> {
+async function callGroqFallback(systemPrompt: string, payload: any): Promise<any> {
   const params = {
     temperature: 0.1,
     max_tokens: 8192,
@@ -47,16 +47,19 @@ async function callGroq(systemPrompt: string, payload: any): Promise<any> {
     completion = await groq.chat.completions.create({ model: 'llama-3.3-70b-versatile', ...params })
   } catch (err: any) {
     if (!isRateLimit(err)) throw err
-    try {
-      completion = await groq.chat.completions.create({ model: 'llama-3.1-8b-instant', ...params })
-    } catch (err2: any) {
-      if (!isRateLimit(err2)) throw err2
-      // Both Groq models rate-limited — fall back to local Ollama
-      console.warn('[translateLarpInMemory] All Groq models rate-limited, falling back to Ollama')
-      return callOllama(params.messages[0].content, JSON.parse(params.messages[1].content))
-    }
+    completion = await groq.chat.completions.create({ model: 'llama-3.1-8b-instant', ...params })
   }
   return JSON.parse(completion.choices[0].message.content ?? '{}')
+}
+
+/** Primary: Ollama. Fallback: Groq 70B → Groq 8B */
+async function callLLM(systemPrompt: string, payload: any): Promise<any> {
+  try {
+    return await callOllama(systemPrompt, payload)
+  } catch (err) {
+    console.warn('[translateLarpInMemory] Ollama failed, falling back to Groq:', (err as any)?.message)
+    return callGroqFallback(systemPrompt, payload)
+  }
 }
 
 export interface LarpChildren {
@@ -119,7 +122,7 @@ REGLAS:
 
   let t: any = {}
   try {
-    t = await callGroq(systemPrompt, payload)
+    t = await callLLM(systemPrompt, payload)
   } catch (err) {
     console.warn('[translateLarpInMemory] Translation failed, returning original:', (err as any)?.message)
     return { larp, ...children }
