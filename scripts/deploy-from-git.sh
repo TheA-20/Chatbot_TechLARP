@@ -18,9 +18,11 @@ npm ci --production=false
 echo "[3/5] Recompilando Next.js..."
 NODE_ENV=production npm run build
 
-echo "[4/5] Copiando archivos estáticos al servidor standalone..."
+echo "[4/5] Copiando archivos al servidor standalone..."
 cp -r public .next/standalone/public
 cp -r .next/static .next/standalone/.next/static
+# Variables de entorno necesarias para el servidor standalone
+cp .env.local .next/standalone/.env.local
 
 echo "[5/5] Reiniciando aplicación..."
 pm2 reload ecosystem.config.js --update-env
