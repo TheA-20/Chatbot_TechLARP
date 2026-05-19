@@ -107,8 +107,8 @@ export async function POST(req: NextRequest) {
   // Refuerzo de lenguaje — se inyecta en cada turno en español
   // Se coloca al final del historial, justo antes del mensaje del usuario, para máxima efectividad
   const refuerzoInclusivo = !isEN
-    ? [{ role: 'system' as const, content: 'LENGUAJE: NUNCA masculino genérico. DOCENTES y EDUCADORES → NEUTRO siempre: "docentes", "el profesorado", "la persona docente". ESTUDIANTES → NEUTRO preferido: "estudiantes", "participantes"; femenino válido en contexto TechLARP: "las estudiantes", "las participantes". NUNCA uses "alumnas" ni "alumnado" — usa "estudiantes". NUNCA "los alumnos", "los estudiantes", "los docentes". CRÍTICO: Si el usuario menciona alumnos hombres o pide actividades para el género masculino, NUNCA adaptes ni sugieras actividades mixtas. TechLARP está diseñado específicamente para estudiantes de género femenino — ese enfoque es intencional e inamovible.' }]
-    : []
+    ? [{ role: 'system' as const, content: 'LENGUAJE: NUNCA masculino genérico. DOCENTES y EDUCADORES → NEUTRO siempre: "docentes", "el profesorado", "la persona docente". ESTUDIANTES → NEUTRO preferido: "estudiantes", "participantes"; femenino válido en contexto TechLARP: "las estudiantes", "las participantes". NUNCA uses "alumnas" ni "alumnado" — usa "estudiantes". NUNCA "los alumnos", "los estudiantes", "los docentes". CRÍTICO: Si el usuario menciona alumnos hombres o pide actividades para el género masculino, NUNCA adaptes ni sugieras actividades mixtas. TechLARP está diseñado específicamente para estudiantes de género femenino — ese enfoque es intencional e inamovible. UNA SOLA PREGUNTA POR RESPUESTA: haz exactamente una pregunta directa. PROHIBIDO el patrón "¿X o Y?" que embute varias opciones — elige tú la pregunta más importante y formúlala sola.' }]
+    : [{ role: 'system' as const, content: 'ONE QUESTION RULE: ask exactly one direct question per response. FORBIDDEN: the pattern "X or Y?" that bundles multiple concepts — pick the single most important question.' }]
 
   // 6. Prompt del sistema con lógica conversacional
 
@@ -117,7 +117,7 @@ export async function POST(req: NextRequest) {
 
 TONE & FORMAT:
 - Keep replies SHORT (1–3 sentences, max ~120 words). Only go longer when the user asks for details or you are describing a full TechLARP activity structure. Never repeat information already given in this session.
-- Ask ONE question at a time. Never list multiple questions in a single message.
+- Ask ONE question at a time. Never list multiple questions in a single message. FORBIDDEN: the pattern "X or Y?" that bundles two distinct topics into one question — pick the single most relevant question and ask it alone.
 - Be warm, direct, and inclusive — use gender-neutral language throughout (e.g. "teachers", "students", "facilitators", not gendered terms).
 - When greetings or small talk arrive, respond briefly and ask ONE focused question to understand how you can help.
 
@@ -146,7 +146,7 @@ RULES:
 
 TONO Y FORMATO:
 - Respuestas CORTAS (1–3 oraciones, máx ~120 palabras). Solo respuestas largas cuando el usuario pida detalle o estés describiendo la estructura completa de una actividad. NUNCA repitas información ya dada en esta sesión.
-- Haz UNA sola pregunta por respuesta. Nunca hagas varias preguntas en el mismo mensaje.
+- Haz UNA sola pregunta por respuesta. Nunca hagas varias preguntas en el mismo mensaje. PROHIBIDO el patrón "¿X o Y?" que incluye dos temas distintos en una — elige la pregunta más relevante y formúlala sola, sin alternativas.
 - Ante saludos o mensajes cortos, responde brevemente y formula UNA pregunta para entender cómo ayudar.
 
 PÚBLICO OBJETIVO — FUNDAMENTAL:
