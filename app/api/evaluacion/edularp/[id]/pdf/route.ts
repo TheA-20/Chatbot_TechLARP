@@ -46,9 +46,24 @@ Rules:
   try {
     completion = await groq.chat.completions.create({ model: 'llama-3.3-70b-versatile', ...translateParams })
   } catch (err: any) {
-    const isRateLimit = err?.status === 429 || err?.error?.code === 'rate_limit_exceeded'
-    if (!isRateLimit) throw err
-    completion = await groq.chat.completions.create({ model: 'llama-3.1-8b-instant', ...translateParams })
+    const rateLimited = err?.status === 429 || err?.error?.code === 'rate_limit_exceeded'
+    if (!rateLimited) throw err
+    try {
+      completion = await groq.chat.completions.create({ model: 'llama-3.1-8b-instant', ...translateParams })
+    } catch (err2: any) {
+      const rateLimited2 = err2?.status === 429 || err2?.error?.code === 'rate_limit_exceeded'
+      if (!rateLimited2) throw err2
+      // All Groq rate-limited — fall back to local Ollama
+      const ollamaUrl = process.env.OLLAMA_URL ?? 'http://localhost:11434'
+      const model     = process.env.OLLAMA_CHAT_MODEL ?? 'llama3.2'
+      const res = await fetch(`${ollamaUrl}/v1/chat/completions`, {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ollama' },
+        body:    JSON.stringify({ model, stream: false, ...translateParams }),
+        signal:  AbortSignal.timeout(180_000),
+      })
+      completion = await res.json()
+    }
   }
 
   let translated: any = {}

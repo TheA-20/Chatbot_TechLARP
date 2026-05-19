@@ -3,6 +3,34 @@ import sql from '@/lib/db'
 
 const groq = new Groq({ apiKey: process.env.GROQ_API_KEY! })
 
+// ---------------------------------------------------------------------------
+// Ollama fallback — OpenAI-compatible endpoint, no rate limit, runs locally
+// ---------------------------------------------------------------------------
+async function ollamaChat(
+  messages: { role: string; content: string }[],
+  maxTokens: number,
+  temperature: number,
+): Promise<string> {
+  const ollamaUrl = process.env.OLLAMA_URL ?? 'http://localhost:11434'
+  const model     = process.env.OLLAMA_CHAT_MODEL ?? 'llama3.2'
+  const res = await fetch(`${ollamaUrl}/v1/chat/completions`, {
+    method:  'POST',
+    headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ollama' },
+    body:    JSON.stringify({ model, messages, temperature, max_tokens: maxTokens, stream: false }),
+    signal:  AbortSignal.timeout(120_000),
+  })
+  if (!res.ok) {
+    const text = await res.text().catch(() => '')
+    throw new Error(`Ollama error ${res.status}: ${text.slice(0, 200)}`)
+  }
+  const data = await res.json()
+  return data.choices?.[0]?.message?.content ?? ''
+}
+
+function isRateLimit(err: any): boolean {
+  return err?.status === 429 || err?.error?.code === 'rate_limit_exceeded'
+}
+
 export interface ChatEngineInput {
   mensaje: string
   historial: any[]
@@ -210,7 +238,7 @@ REGLAS:
 - CAPACIDAD DE DESCARGA: Esta interfaz de chat tiene un botón de descarga de PDF integrado para las actividades. Cuando el usuario pida descargar la ficha o el archivo de una actividad, dile que el botón de descarga aparece justo debajo de este mensaje — NUNCA digas que no puedes proporcionar archivos ni que eres solo un asistente de texto cuando se trate de descargas.
 - VISTA PREVIA INTERACTIVA: Esta interfaz tiene un panel lateral que muestra todos los detalles de una actividad (misiones, roles, cartas, paralelos, objetivos). Cuando recomiendes una actividad concreta, termina preguntando si es la que la docente busca o si quiere que la veamos en detalle. SÓLO cuando el usuario confirme explícitamente que quiere esa actividad (responda "sí", "esa", "me gusta", "quiero verla", "muestramela", "esa misma", "perfecto", "adelante" o similar confirmación), incluye la cadena exacta <<VISTA_PREVIA>> al inicio de tu respuesta. Esto abrirá automáticamente el panel de vista previa. Si el usuario pide otra actividad diferente o quiere cambiar, NO incluyas <<VISTA_PREVIA>>.${contextoDetallado}`
 
-  // 7. Llamada a Groq
+  // 7. Llamada al LLM con triple fallback: Groq 70B → Groq 8B → Ollama local
   let textoRespuesta = ''
   const chatMessages = [
     { role: 'system' as const, content: systemPrompt },
@@ -219,28 +247,25 @@ REGLAS:
     { role: 'user' as const, content: mensaje },
   ]
 
-  let response
   try {
-    response = await groq.chat.completions.create({
-      model: 'llama-3.3-70b-versatile',
-      max_tokens: 600,
-      temperature: 0.3,
-      messages: chatMessages,
+    const r = await groq.chat.completions.create({
+      model: 'llama-3.3-70b-versatile', max_tokens: 600, temperature: 0.3, messages: chatMessages,
     })
+    textoRespuesta = r.choices[0]?.message?.content ?? ''
   } catch (err: any) {
-    // Fallback to smaller model on rate limit
-    const isRateLimit = err?.status === 429 || err?.error?.code === 'rate_limit_exceeded'
-    if (!isRateLimit) throw err
-    console.warn('[ChatEngine] Rate limit on primary model, falling back to llama-3.1-8b-instant')
-    response = await groq.chat.completions.create({
-      model: 'llama-3.1-8b-instant',
-      max_tokens: 600,
-      temperature: 0.3,
-      messages: chatMessages,
-    })
+    if (!isRateLimit(err)) throw err
+    console.warn('[ChatEngine] llama-3.3-70b-versatile rate-limited → trying llama-3.1-8b-instant')
+    try {
+      const r = await groq.chat.completions.create({
+        model: 'llama-3.1-8b-instant', max_tokens: 600, temperature: 0.3, messages: chatMessages,
+      })
+      textoRespuesta = r.choices[0]?.message?.content ?? ''
+    } catch (err2: any) {
+      if (!isRateLimit(err2)) throw err2
+      console.warn('[ChatEngine] All Groq models rate-limited → falling back to local Ollama')
+      textoRespuesta = await ollamaChat(chatMessages, 600, 0.3)
+    }
   }
-
-  textoRespuesta = response.choices[0]?.message?.content ?? ''
 
   // 8. Detectar señal de confirmación de vista previa
   const openPreview = textoRespuesta.includes('<<VISTA_PREVIA>>')
