@@ -342,12 +342,17 @@ export async function generateEduLarpPDF(data: EduLarpData): Promise<Uint8Array>
     w.sectionTitle('Paralelos con la realidad')
 
     const colW = [CONTENT_W * 0.33, CONTENT_W * 0.33, CONTENT_W * 0.34]
+    const cellPad = 6
+    const cellFontSize = 8.5
+    const cellLineH = cellFontSize * 1.35
+
+    // Header row
     w.rect(MARGIN, w.y - 14, CONTENT_W, 20, PURPLE)
     const headers = ['Narrativa fantastica', 'Equivalente real', 'Proposito pedagogico']
     let xPos = MARGIN
     for (let i = 0; i < headers.length; i++) {
       w.page.drawText(headers[i], {
-        x: xPos + 4, y: w.y - 10, size: 8, font: bold, color: WHITE,
+        x: xPos + cellPad, y: w.y - 10, size: 8, font: bold, color: WHITE,
       })
       xPos += colW[i]
     }
@@ -355,21 +360,33 @@ export async function generateEduLarpPDF(data: EduLarpData): Promise<Uint8Array>
 
     for (let idx = 0; idx < data.paralelos.length; idx++) {
       const p = data.paralelos[idx]
-      w.ensureSpace(32)
-      const bgColor = idx % 2 === 0 ? WHITE : LIGHT_BG
-      w.rect(MARGIN, w.y - 22, CONTENT_W, 28, bgColor)
-      xPos = MARGIN
       const texts = [p.narrativa || '', p.mundo_real || '', p.proposito || '']
-      for (let i = 0; i < texts.length; i++) {
-        const cellText = texts[i].slice(0, 50).replace(/[^\x20-\x7E\xA0-\xFF\u0100-\u017F]/g, '')
-        try {
-          w.page.drawText(cellText, {
-            x: xPos + 4, y: w.y - 14, size: 8.5, font: regular, color: DARK,
-          })
-        } catch { /* skip unrenderable */ }
+
+      // Wrap each cell and compute row height from max lines
+      const wrappedCells = texts.map((t, i) =>
+        w.wrapText(t, regular, cellFontSize, colW[i] - cellPad * 2)
+      )
+      const maxLines = Math.max(...wrappedCells.map(c => c.length), 1)
+      const rowH = maxLines * cellLineH + cellPad * 2
+
+      w.ensureSpace(rowH + 4)
+      const bgColor = idx % 2 === 0 ? WHITE : LIGHT_BG
+      w.rect(MARGIN, w.y - rowH, CONTENT_W, rowH, bgColor)
+
+      xPos = MARGIN
+      for (let i = 0; i < wrappedCells.length; i++) {
+        let lineY = w.y - cellPad - cellFontSize
+        for (const line of wrappedCells[i]) {
+          try {
+            w.page.drawText(line, {
+              x: xPos + cellPad, y: lineY, size: cellFontSize, font: regular, color: DARK,
+            })
+          } catch { /* skip unrenderable chars */ }
+          lineY -= cellLineH
+        }
         xPos += colW[i]
       }
-      w.y -= 30
+      w.y -= rowH + 2
     }
   }
 
