@@ -81,6 +81,7 @@ const dict = {
     newConversation: 'Nueva conversación',
     chatWelcome: '¿Qué actividad necesitas?',
     chatWelcomeDesc: 'Cuéntanos sobre tu clase, el tema que quieres trabajar o las competencias que buscas desarrollar.',
+    chatWelcomeMessage: '¡Hola! Soy el Asistente TechLARP. Puedo ayudarte a encontrar una actividad que se ajuste a tu clase, adaptarla a tus necesidades o resolver cualquier duda sobre la metodología. ¿Cómo puedo ayudarte hoy?',
     chatPlaceholder: 'Describe qué tipo de actividad necesitas...',
     chatError: 'Hubo un error. Inténtalo de nuevo.',
     chatSuggestions: [
@@ -421,6 +422,7 @@ const dict = {
     newConversation: 'New conversation',
     chatWelcome: 'What activity do you need?',
     chatWelcomeDesc: 'Tell us about your class, the topic you want to work on, or the skills you want to develop.',
+    chatWelcomeMessage: 'Hello! I am the TechLARP Assistant. I can help you find an activity that fits your class, adapt it to your needs, or answer any questions about the methodology. How can I help you today?',
     chatPlaceholder: 'Describe what type of activity you need...',
     chatError: 'An error occurred. Please try again.',
     chatSuggestions: [

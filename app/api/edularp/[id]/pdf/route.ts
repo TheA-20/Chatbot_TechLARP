@@ -90,3 +90,58 @@ export async function GET(
     },
   })
 }
+
+// POST — generate PDF from client-provided (modified) activity data without saving to DB
+export async function POST(
+  req: NextRequest,
+  { params }: { params: { id: string } }
+) {
+  const session = await getServerSession(authOptions)
+  if (!session) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
+
+  const body = await req.json().catch(() => null)
+  if (!body?.larp) return NextResponse.json({ error: 'Datos inválidos' }, { status: 400 })
+
+  const { larp, paralelos = [], misiones = [], roles = [], cartas = [], objetivos = [] } = body
+
+  const data: EduLarpData = {
+    nombre:           larp.nombre,
+    proyecto:         larp.proyecto,
+    descripcion:      larp.descripcion,
+    storyboard:       larp.storyboard,
+    storyboard_alt:   larp.storyboard_alt,
+    nivel_educativo:  larp.nivel_educativo,
+    asignaturas:      larp.asignaturas,
+    duracion_min:     larp.duracion_min,
+    num_participantes: larp.num_participantes,
+    materiales:       larp.materiales,
+    evaluacion:       larp.evaluacion,
+    notas_docente:    larp.notas_docente,
+    competencias:     larp.competencias,
+    tipo_version:     larp.tipo_version,
+    idioma_original:  larp.idioma_original,
+    veces_modificada: larp.veces_modificada,
+    autor_nombre:     larp.autor_nombre,
+    creado_en:        larp.creado_en,
+    paralelos:        paralelos as any[],
+    misiones:         misiones as any[],
+    roles:            roles as any[],
+    cartas:           cartas as any[],
+    objetivos:        objetivos as any[],
+  }
+
+  const pdfBytes = await generateEduLarpPDF(data)
+  const safeName = (data.nombre ?? 'actividad')
+    .replace(/[^a-zA-Z0-9áéíóúñÁÉÍÓÚÑ\s-]/g, '')
+    .replace(/\s+/g, '_')
+    .slice(0, 60)
+
+  return new Response(Buffer.from(pdfBytes), {
+    headers: {
+      'Content-Type': 'application/pdf',
+      'Content-Disposition': `attachment; filename="${safeName}_modificada_TechLARP.pdf"`,
+      'Content-Length': String(pdfBytes.length),
+      'Cache-Control': 'private, no-store',
+    },
+  })
+}

@@ -1,10 +1,7 @@
 import type { Metadata } from 'next'
-import { Inter } from 'next/font/google'
 import Image from 'next/image'
 import './globals.css'
 import { Providers } from './providers'
-
-const inter = Inter({ subsets: ['latin'] })
 
 export const metadata: Metadata = {
   title:       'TechLARP — Plataforma de actividades educativas',
@@ -18,7 +15,10 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="es">
-      <body className={inter.className}>
+      <head>
+        <meta charSet="utf-8" />
+      </head>
+      <body>
         <Providers>{children}</Providers>
         {/* Logo DEI – grupo de trabajo desarrollador de la plataforma */}
         <div

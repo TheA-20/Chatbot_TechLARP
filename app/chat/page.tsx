@@ -55,8 +55,19 @@ export default function ChatPage() {
   const [previewData, setPreviewData]         = useState<LarpDetalle | null>(null)
   const [previewCargando, setPreviewCargando] = useState(false)
   const [previewTab, setPreviewTab]           = useState<'resumen' | 'misiones' | 'roles' | 'cartas'>('resumen')
+  const [previewEdits, setPreviewEdits]       = useState<Record<string, string>>({})
+  const [editingField, setEditingField]       = useState<string | null>(null)
   const bottomRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
+
+  /** Get the current value of a preview field (edited or original) */
+  function pv(key: string, original: string | undefined | null): string {
+    return key in previewEdits ? previewEdits[key] : (original ?? '')
+  }
+  /** Store a modified value for a preview field */
+  function setPreviewField(key: string, val: string) {
+    setPreviewEdits(p => ({ ...p, [key]: val }))
+  }
 
   useEffect(() => { if (status === 'unauthenticated') router.push('/login') }, [status])
   useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: 'smooth' }) }, [mensajes])
@@ -99,6 +110,11 @@ export default function ChatPage() {
     }
     setPreviewAbierto(true)
     setPreviewTab('resumen')
+    if (previewLarpId !== id) {
+      // Reset edits when switching to a different activity
+      setPreviewEdits({})
+      setEditingField(null)
+    }
     if (previewLarpId === id && previewData) return // ya en caché
     setPreviewLarpId(id)
     setPreviewData(null)
@@ -120,6 +136,39 @@ export default function ChatPage() {
       const a = document.createElement('a')
       a.href = url
       a.download = `${nombre.replace(/[^a-zA-Z0-9áéíóúñÁÉÍÓÚÑ\s-]/g, '').replace(/\s+/g, '_')}_TechLARP.pdf`
+      document.body.appendChild(a)
+      a.click()
+      a.remove()
+      URL.revokeObjectURL(url)
+    } catch { /* silently fail */ }
+    setDownloading(null)
+  }
+
+  async function handleDownloadModifiedPDF() {
+    if (!previewData || !previewLarpId) return
+    setDownloading('mod_' + previewLarpId)
+    try {
+      // Deep-clone previewData and apply all edits
+      const modified: LarpDetalle = JSON.parse(JSON.stringify(previewData))
+      for (const [key, val] of Object.entries(previewEdits)) {
+        const parts = key.split('|')
+        if (parts.length === 2) {
+          ;(modified as any)[parts[0]][parts[1]] = val
+        } else if (parts.length === 3) {
+          ;(modified as any)[parts[0]][parseInt(parts[1])][parts[2]] = val
+        }
+      }
+      const res = await fetch(`/api/edularp/${previewLarpId}/pdf`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(modified),
+      })
+      if (!res.ok) throw new Error('Error')
+      const blob = await res.blob()
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `${previewData.larp.nombre.replace(/[^a-zA-Z0-9áéíóúñÁÉÍÓÚÑ\s-]/g, '').replace(/\s+/g, '_')}_modificada_TechLARP.pdf`
       document.body.appendChild(a)
       a.click()
       a.remove()
@@ -201,6 +250,8 @@ export default function ChatPage() {
     setPreviewAbierto(false)
     setPreviewLarpId(null)
     setPreviewData(null)
+    setPreviewEdits({})
+    setEditingField(null)
     if (window.innerWidth < 768) setSidebarAbierto(false)
   }
 
@@ -343,6 +394,12 @@ export default function ChatPage() {
               <p className="text-sm text-gray-400 max-w-md mx-auto">
                 {t.chatWelcomeDesc}
               </p>
+            </div>
+            {/* Welcome message bubble from the assistant */}
+            <div className="flex flex-col items-start">
+              <div className="max-w-[85%] rounded-2xl rounded-bl-sm px-4 py-3 text-sm leading-relaxed bg-white border border-gray-100 text-gray-800">
+                {t.chatWelcomeMessage}
+              </div>
             </div>
             <div className="grid grid-cols-2 gap-3">
               {sugerencias.map((s, i) => (
@@ -492,10 +549,13 @@ export default function ChatPage() {
             {/* Cabecera */}
             <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100 flex-shrink-0 bg-white">
               <div className="flex items-center gap-2 min-w-0">
-                <div className="w-2 h-2 rounded-full bg-purple-400 flex-shrink-0" />
+                <div className={`w-2 h-2 rounded-full flex-shrink-0 ${Object.keys(previewEdits).length > 0 ? 'bg-yellow-400' : 'bg-purple-400'}`} />
                 <h3 className="text-sm font-semibold text-gray-800 truncate">
                   {previewData?.larp?.nombre ?? t.previewTitle}
                 </h3>
+                {Object.keys(previewEdits).length > 0 && (
+                  <span className="text-[10px] bg-yellow-100 text-yellow-700 border border-yellow-200 rounded-full px-1.5 py-0.5 flex-shrink-0">modificada</span>
+                )}
               </div>
               <button onClick={() => setPreviewAbierto(false)} className="text-gray-400 hover:text-gray-600 flex-shrink-0 ml-2">
                 <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -596,14 +656,22 @@ export default function ChatPage() {
                     {previewData.larp.descripcion && (
                       <div>
                         <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wide mb-1">{t.previewLabelDescription}</p>
-                        <p className="text-xs text-gray-700 leading-relaxed">{previewData.larp.descripcion}</p>
+                        {editingField === 'larp|descripcion' ? (
+                          <textarea className="w-full text-xs border border-primary rounded-lg p-1.5 resize-none focus:outline-none focus:ring-1 focus:ring-primary/30" defaultValue={pv('larp|descripcion', previewData.larp.descripcion)} rows={4} autoFocus onBlur={e => { setPreviewField('larp|descripcion', e.target.value); setEditingField(null) }} />
+                        ) : (
+                          <p className={`text-xs text-gray-700 leading-relaxed cursor-text rounded hover:bg-yellow-50/60 ${previewEdits['larp|descripcion'] !== undefined ? 'bg-yellow-50 ring-1 ring-yellow-300 px-1' : ''}`} onClick={() => setEditingField('larp|descripcion')} title="Haz clic para editar">{pv('larp|descripcion', previewData.larp.descripcion)}</p>
+                        )}
                       </div>
                     )}
 
                     {previewData.larp.storyboard && (
                       <div>
                         <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wide mb-1">{t.previewLabelStory}</p>
-                        <p className="text-xs text-gray-700 leading-relaxed">{previewData.larp.storyboard}</p>
+                        {editingField === 'larp|storyboard' ? (
+                          <textarea className="w-full text-xs border border-primary rounded-lg p-1.5 resize-none focus:outline-none focus:ring-1 focus:ring-primary/30" defaultValue={pv('larp|storyboard', previewData.larp.storyboard)} rows={5} autoFocus onBlur={e => { setPreviewField('larp|storyboard', e.target.value); setEditingField(null) }} />
+                        ) : (
+                          <p className={`text-xs text-gray-700 leading-relaxed cursor-text rounded hover:bg-yellow-50/60 ${previewEdits['larp|storyboard'] !== undefined ? 'bg-yellow-50 ring-1 ring-yellow-300 px-1' : ''}`} onClick={() => setEditingField('larp|storyboard')} title="Haz clic para editar">{pv('larp|storyboard', previewData.larp.storyboard)}</p>
+                        )}
                       </div>
                     )}
 
@@ -639,14 +707,22 @@ export default function ChatPage() {
                     {previewData.larp.materiales && (
                       <div>
                         <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wide mb-1">{t.previewLabelMaterials}</p>
-                        <p className="text-xs text-gray-700 leading-relaxed">{previewData.larp.materiales}</p>
+                        {editingField === 'larp|materiales' ? (
+                          <textarea className="w-full text-xs border border-primary rounded-lg p-1.5 resize-none focus:outline-none focus:ring-1 focus:ring-primary/30" defaultValue={pv('larp|materiales', previewData.larp.materiales)} rows={3} autoFocus onBlur={e => { setPreviewField('larp|materiales', e.target.value); setEditingField(null) }} />
+                        ) : (
+                          <p className={`text-xs text-gray-700 leading-relaxed cursor-text rounded hover:bg-yellow-50/60 ${previewEdits['larp|materiales'] !== undefined ? 'bg-yellow-50 ring-1 ring-yellow-300 px-1' : ''}`} onClick={() => setEditingField('larp|materiales')} title="Haz clic para editar">{pv('larp|materiales', previewData.larp.materiales)}</p>
+                        )}
                       </div>
                     )}
 
                     {previewData.larp.evaluacion && (
                       <div>
                         <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wide mb-1">{t.previewLabelEvaluation}</p>
-                        <p className="text-xs text-gray-700 leading-relaxed">{previewData.larp.evaluacion}</p>
+                        {editingField === 'larp|evaluacion' ? (
+                          <textarea className="w-full text-xs border border-primary rounded-lg p-1.5 resize-none focus:outline-none focus:ring-1 focus:ring-primary/30" defaultValue={pv('larp|evaluacion', previewData.larp.evaluacion)} rows={3} autoFocus onBlur={e => { setPreviewField('larp|evaluacion', e.target.value); setEditingField(null) }} />
+                        ) : (
+                          <p className={`text-xs text-gray-700 leading-relaxed cursor-text rounded hover:bg-yellow-50/60 ${previewEdits['larp|evaluacion'] !== undefined ? 'bg-yellow-50 ring-1 ring-yellow-300 px-1' : ''}`} onClick={() => setEditingField('larp|evaluacion')} title="Haz clic para editar">{pv('larp|evaluacion', previewData.larp.evaluacion)}</p>
+                        )}
                       </div>
                     )}
                   </>
@@ -660,26 +736,48 @@ export default function ChatPage() {
                       : previewData.misiones.map((m, i) => (
                         <div key={i} className="border border-gray-100 rounded-xl p-3 space-y-2">
                           <div className="flex items-start justify-between gap-2">
-                            <p className="text-xs font-semibold text-gray-800">{m.titulo}</p>
+                            {editingField === `misiones|${i}|titulo` ? (
+                              <input className="flex-1 text-xs font-semibold border border-primary rounded-lg px-1.5 py-1 focus:outline-none focus:ring-1 focus:ring-primary/30" defaultValue={pv(`misiones|${i}|titulo`, m.titulo)} autoFocus onBlur={e => { setPreviewField(`misiones|${i}|titulo`, e.target.value); setEditingField(null) }} />
+                            ) : (
+                              <p className={`text-xs font-semibold text-gray-800 cursor-text rounded hover:bg-yellow-50/60 ${previewEdits[`misiones|${i}|titulo`] !== undefined ? 'bg-yellow-50 ring-1 ring-yellow-300 px-1' : ''}`} onClick={() => setEditingField(`misiones|${i}|titulo`)} title="Haz clic para editar">{pv(`misiones|${i}|titulo`, m.titulo)}</p>
+                            )}
                             {m.duracion_min && <span className="text-[10px] text-gray-400 flex-shrink-0">{m.duracion_min} {t.previewLabelDuration}</span>}
                           </div>
-                          {m.objetivo && <p className="text-xs text-gray-600">{m.objetivo}</p>}
-                          {m.problema_larp && (
+                          {(m.objetivo || previewEdits[`misiones|${i}|objetivo`] !== undefined) && (
+                            editingField === `misiones|${i}|objetivo` ? (
+                              <textarea className="w-full text-xs border border-primary rounded-lg p-1.5 resize-none focus:outline-none focus:ring-1 focus:ring-primary/30" defaultValue={pv(`misiones|${i}|objetivo`, m.objetivo)} rows={2} autoFocus onBlur={e => { setPreviewField(`misiones|${i}|objetivo`, e.target.value); setEditingField(null) }} />
+                            ) : (
+                              <p className={`text-xs text-gray-600 cursor-text rounded hover:bg-yellow-50/60 ${previewEdits[`misiones|${i}|objetivo`] !== undefined ? 'bg-yellow-50 ring-1 ring-yellow-300 px-1' : ''}`} onClick={() => setEditingField(`misiones|${i}|objetivo`)} title="Haz clic para editar">{pv(`misiones|${i}|objetivo`, m.objetivo)}</p>
+                            )
+                          )}
+                          {(m.problema_larp || previewEdits[`misiones|${i}|problema_larp`] !== undefined) && (
                             <div className="bg-amber-50 border border-amber-100 rounded-lg p-2">
                               <p className="text-[10px] font-semibold text-amber-700 mb-0.5">{t.previewLabelLarpProblem}</p>
-                              <p className="text-xs text-amber-800">{m.problema_larp}</p>
+                              {editingField === `misiones|${i}|problema_larp` ? (
+                                <textarea className="w-full text-xs border border-amber-300 rounded p-1 resize-none focus:outline-none" defaultValue={pv(`misiones|${i}|problema_larp`, m.problema_larp)} rows={2} autoFocus onBlur={e => { setPreviewField(`misiones|${i}|problema_larp`, e.target.value); setEditingField(null) }} />
+                              ) : (
+                                <p className={`text-xs text-amber-800 cursor-text rounded hover:bg-amber-100/60 ${previewEdits[`misiones|${i}|problema_larp`] !== undefined ? 'ring-1 ring-yellow-400' : ''}`} onClick={() => setEditingField(`misiones|${i}|problema_larp`)} title="Haz clic para editar">{pv(`misiones|${i}|problema_larp`, m.problema_larp)}</p>
+                              )}
                             </div>
                           )}
-                          {m.problema_real && (
+                          {(m.problema_real || previewEdits[`misiones|${i}|problema_real`] !== undefined) && (
                             <div className="bg-blue-50 border border-blue-100 rounded-lg p-2">
                               <p className="text-[10px] font-semibold text-blue-700 mb-0.5">{t.previewLabelRealProblem}</p>
-                              <p className="text-xs text-blue-800">{m.problema_real}</p>
+                              {editingField === `misiones|${i}|problema_real` ? (
+                                <textarea className="w-full text-xs border border-blue-300 rounded p-1 resize-none focus:outline-none" defaultValue={pv(`misiones|${i}|problema_real`, m.problema_real)} rows={2} autoFocus onBlur={e => { setPreviewField(`misiones|${i}|problema_real`, e.target.value); setEditingField(null) }} />
+                              ) : (
+                                <p className={`text-xs text-blue-800 cursor-text rounded hover:bg-blue-100/60 ${previewEdits[`misiones|${i}|problema_real`] !== undefined ? 'ring-1 ring-yellow-400' : ''}`} onClick={() => setEditingField(`misiones|${i}|problema_real`)} title="Haz clic para editar">{pv(`misiones|${i}|problema_real`, m.problema_real)}</p>
+                              )}
                             </div>
                           )}
-                          {m.solucion && (
+                          {(m.solucion || previewEdits[`misiones|${i}|solucion`] !== undefined) && (
                             <div className="bg-green-50 border border-green-100 rounded-lg p-2">
                               <p className="text-[10px] font-semibold text-green-700 mb-0.5">{t.previewLabelSolution}</p>
-                              <p className="text-xs text-green-800">{m.solucion}</p>
+                              {editingField === `misiones|${i}|solucion` ? (
+                                <textarea className="w-full text-xs border border-green-300 rounded p-1 resize-none focus:outline-none" defaultValue={pv(`misiones|${i}|solucion`, m.solucion)} rows={2} autoFocus onBlur={e => { setPreviewField(`misiones|${i}|solucion`, e.target.value); setEditingField(null) }} />
+                              ) : (
+                                <p className={`text-xs text-green-800 cursor-text rounded hover:bg-green-100/60 ${previewEdits[`misiones|${i}|solucion`] !== undefined ? 'ring-1 ring-yellow-400' : ''}`} onClick={() => setEditingField(`misiones|${i}|solucion`)} title="Haz clic para editar">{pv(`misiones|${i}|solucion`, m.solucion)}</p>
+                              )}
                             </div>
                           )}
                         </div>
@@ -695,11 +793,31 @@ export default function ChatPage() {
                       ? <p className="text-xs text-gray-400 text-center py-8">{t.previewEmptyRoles}</p>
                       : previewData.roles.map((r, i) => (
                         <div key={i} className="border border-gray-100 rounded-xl p-3 space-y-1">
-                          <p className="text-xs font-semibold text-gray-800">{r.nombre}</p>
-                          {r.descripcion && <p className="text-xs text-gray-600">{r.descripcion}</p>}
-                          {r.habilidades && <p className="text-[10px] text-purple-600 italic">{t.previewLabelSkills}: {r.habilidades}</p>}
-                          {r.num_jugadoras != null && (
-                            <p className="text-[10px] text-gray-400">{r.num_jugadoras} {t.previewLabelPlayers}</p>
+                          {editingField === `roles|${i}|nombre_rol` ? (
+                            <input className="w-full text-xs font-semibold border border-primary rounded-lg px-1.5 py-1 focus:outline-none focus:ring-1 focus:ring-primary/30" defaultValue={pv(`roles|${i}|nombre_rol`, r.nombre_rol)} autoFocus onBlur={e => { setPreviewField(`roles|${i}|nombre_rol`, e.target.value); setEditingField(null) }} />
+                          ) : (
+                            <p className={`text-xs font-semibold text-gray-800 cursor-text rounded hover:bg-yellow-50/60 ${previewEdits[`roles|${i}|nombre_rol`] !== undefined ? 'bg-yellow-50 ring-1 ring-yellow-300 px-1' : ''}`} onClick={() => setEditingField(`roles|${i}|nombre_rol`)} title="Haz clic para editar">{pv(`roles|${i}|nombre_rol`, r.nombre_rol)}</p>
+                          )}
+                          {(r.desc_habilidad || previewEdits[`roles|${i}|desc_habilidad`] !== undefined) && (
+                            editingField === `roles|${i}|desc_habilidad` ? (
+                              <textarea className="w-full text-xs border border-primary rounded-lg p-1.5 resize-none focus:outline-none focus:ring-1 focus:ring-primary/30" defaultValue={pv(`roles|${i}|desc_habilidad`, r.desc_habilidad)} rows={3} autoFocus onBlur={e => { setPreviewField(`roles|${i}|desc_habilidad`, e.target.value); setEditingField(null) }} />
+                            ) : (
+                              <p className={`text-xs text-gray-600 cursor-text rounded hover:bg-yellow-50/60 ${previewEdits[`roles|${i}|desc_habilidad`] !== undefined ? 'bg-yellow-50 ring-1 ring-yellow-300 px-1' : ''}`} onClick={() => setEditingField(`roles|${i}|desc_habilidad`)} title="Haz clic para editar">{pv(`roles|${i}|desc_habilidad`, r.desc_habilidad)}</p>
+                            )
+                          )}
+                          {(r.nombre_habilidad || previewEdits[`roles|${i}|nombre_habilidad`] !== undefined) && (
+                            editingField === `roles|${i}|nombre_habilidad` ? (
+                              <input className="w-full text-xs border border-primary rounded-lg px-1.5 py-1 focus:outline-none focus:ring-1 focus:ring-primary/30" defaultValue={pv(`roles|${i}|nombre_habilidad`, r.nombre_habilidad)} autoFocus onBlur={e => { setPreviewField(`roles|${i}|nombre_habilidad`, e.target.value); setEditingField(null) }} />
+                            ) : (
+                              <p className={`text-[10px] text-purple-600 italic cursor-text rounded hover:bg-yellow-50/60 ${previewEdits[`roles|${i}|nombre_habilidad`] !== undefined ? 'bg-yellow-50 ring-1 ring-yellow-300 px-1' : ''}`} onClick={() => setEditingField(`roles|${i}|nombre_habilidad`)} title="Haz clic para editar">{t.previewLabelSkills}: {pv(`roles|${i}|nombre_habilidad`, r.nombre_habilidad)}</p>
+                            )
+                          )}
+                          {(r.uso_juego || previewEdits[`roles|${i}|uso_juego`] !== undefined) && (
+                            editingField === `roles|${i}|uso_juego` ? (
+                              <textarea className="w-full text-xs border border-primary rounded-lg p-1.5 resize-none focus:outline-none focus:ring-1 focus:ring-primary/30" defaultValue={pv(`roles|${i}|uso_juego`, r.uso_juego)} rows={2} autoFocus onBlur={e => { setPreviewField(`roles|${i}|uso_juego`, e.target.value); setEditingField(null) }} />
+                            ) : (
+                              <p className={`text-[10px] text-gray-500 italic cursor-text rounded hover:bg-yellow-50/60 ${previewEdits[`roles|${i}|uso_juego`] !== undefined ? 'bg-yellow-50 ring-1 ring-yellow-300 px-1' : ''}`} onClick={() => setEditingField(`roles|${i}|uso_juego`)} title="Haz clic para editar">{pv(`roles|${i}|uso_juego`, r.uso_juego)}</p>
+                            )
                           )}
                         </div>
                       ))
@@ -714,12 +832,28 @@ export default function ChatPage() {
                       ? <p className="text-xs text-gray-400 text-center py-8">{t.previewEmptyCards}</p>
                       : previewData.cartas.map((c, i) => (
                         <div key={i} className="border border-gray-100 rounded-xl p-3 space-y-1">
-                          <div className="flex items-center justify-between">
-                            <p className="text-xs font-semibold text-gray-800">{c.titulo}</p>
-                            {c.tipo && <span className="text-[10px] bg-gray-100 text-gray-500 rounded-full px-2 py-0.5">{c.tipo}</span>}
+                          <div className="flex items-center justify-between gap-2">
+                            {editingField === `cartas|${i}|nombre` ? (
+                              <input className="flex-1 text-xs font-semibold border border-primary rounded-lg px-1.5 py-1 focus:outline-none focus:ring-1 focus:ring-primary/30" defaultValue={pv(`cartas|${i}|nombre`, c.nombre)} autoFocus onBlur={e => { setPreviewField(`cartas|${i}|nombre`, e.target.value); setEditingField(null) }} />
+                            ) : (
+                              <p className={`text-xs font-semibold text-gray-800 cursor-text rounded hover:bg-yellow-50/60 ${previewEdits[`cartas|${i}|nombre`] !== undefined ? 'bg-yellow-50 ring-1 ring-yellow-300 px-1' : ''}`} onClick={() => setEditingField(`cartas|${i}|nombre`)} title="Haz clic para editar">{pv(`cartas|${i}|nombre`, c.nombre)}</p>
+                            )}
+                            {c.tipo && <span className="text-[10px] bg-gray-100 text-gray-500 rounded-full px-2 py-0.5 flex-shrink-0">{c.tipo}</span>}
                           </div>
-                          {c.contenido && <p className="text-xs text-gray-600">{c.contenido}</p>}
-                          {c.efecto && <p className="text-[10px] text-amber-700 italic">{t.previewLabelEffect}: {c.efecto}</p>}
+                          {(c.lore || previewEdits[`cartas|${i}|lore`] !== undefined) && (
+                            editingField === `cartas|${i}|lore` ? (
+                              <textarea className="w-full text-xs border border-primary rounded-lg p-1.5 resize-none focus:outline-none focus:ring-1 focus:ring-primary/30" defaultValue={pv(`cartas|${i}|lore`, c.lore)} rows={3} autoFocus onBlur={e => { setPreviewField(`cartas|${i}|lore`, e.target.value); setEditingField(null) }} />
+                            ) : (
+                              <p className={`text-xs text-gray-600 cursor-text rounded hover:bg-yellow-50/60 ${previewEdits[`cartas|${i}|lore`] !== undefined ? 'bg-yellow-50 ring-1 ring-yellow-300 px-1' : ''}`} onClick={() => setEditingField(`cartas|${i}|lore`)} title="Haz clic para editar">{pv(`cartas|${i}|lore`, c.lore)}</p>
+                            )
+                          )}
+                          {(c.habilidad || previewEdits[`cartas|${i}|habilidad`] !== undefined) && (
+                            editingField === `cartas|${i}|habilidad` ? (
+                              <input className="w-full text-xs border border-primary rounded-lg px-1.5 py-1 focus:outline-none focus:ring-1 focus:ring-primary/30" defaultValue={pv(`cartas|${i}|habilidad`, c.habilidad)} autoFocus onBlur={e => { setPreviewField(`cartas|${i}|habilidad`, e.target.value); setEditingField(null) }} />
+                            ) : (
+                              <p className={`text-[10px] text-purple-600 italic cursor-text rounded hover:bg-yellow-50/60 ${previewEdits[`cartas|${i}|habilidad`] !== undefined ? 'bg-yellow-50 ring-1 ring-yellow-300 px-1' : ''}`} onClick={() => setEditingField(`cartas|${i}|habilidad`)} title="Haz clic para editar">{t.previewLabelSkills}: {pv(`cartas|${i}|habilidad`, c.habilidad)}</p>
+                            )
+                          )}
                         </div>
                       ))
                     }
@@ -731,10 +865,31 @@ export default function ChatPage() {
 
             {/* Footer — descarga */}
             {previewData && !previewCargando && (
-              <div className="px-4 py-3 border-t border-gray-100 flex-shrink-0">
+              <div className="px-4 py-3 border-t border-gray-100 flex-shrink-0 space-y-2">
+                {Object.keys(previewEdits).length > 0 && (
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={handleDownloadModifiedPDF}
+                      disabled={!!downloading}
+                      className="flex-1 flex items-center justify-center gap-2 text-xs text-white bg-amber-500 hover:bg-amber-600 rounded-xl py-2 transition-colors disabled:opacity-50"
+                    >
+                      {downloading === 'mod_' + previewLarpId ? (
+                        <svg className="w-3.5 h-3.5 animate-spin" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" /><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" /></svg>
+                      ) : (
+                        <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M12 10v6m0 0l-3-3m3 3l3-3M3 17v3a2 2 0 002 2h14a2 2 0 002-2v-3" /></svg>
+                      )}
+                      Descargar versión modificada
+                    </button>
+                    <button
+                      onClick={() => { setPreviewEdits({}); setEditingField(null) }}
+                      className="text-xs text-gray-400 hover:text-gray-600 px-2.5 py-2 rounded-xl border border-gray-200 hover:border-gray-300 transition-colors"
+                      title="Descartar cambios"
+                    >↺</button>
+                  </div>
+                )}
                 <button
                   onClick={() => handleDownloadPDF(previewData.larp.id, previewData.larp.nombre)}
-                  disabled={downloading === previewData.larp.id}
+                  disabled={!!downloading}
                   className="w-full flex items-center justify-center gap-2 text-xs text-white bg-primary hover:bg-purple-700 rounded-xl py-2 transition-colors disabled:opacity-50"
                 >
                   {downloading === previewData.larp.id ? (
@@ -749,6 +904,9 @@ export default function ChatPage() {
                   )}
                   {t.previewDownloadPdf}
                 </button>
+                {Object.keys(previewEdits).length === 0 && (
+                  <p className="text-[10px] text-gray-400 text-center">Toca cualquier texto para editarlo</p>
+                )}
               </div>
             )}
           </>

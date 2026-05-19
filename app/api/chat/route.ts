@@ -104,10 +104,10 @@ export async function POST(req: NextRequest) {
   // Evita exceder el context window del modelo en sesiones largas
   const historialLimitado = (historial as any[]).slice(-10)
 
-  // Refuerzo de lenguaje inclusivo — se inyecta en cada turno en español
+  // Refuerzo de lenguaje — se inyecta en cada turno en español
   // Se coloca al final del historial, justo antes del mensaje del usuario, para máxima efectividad
   const refuerzoInclusivo = !isEN
-    ? [{ role: 'system' as const, content: 'LENGUAJE OBLIGATORIO: usa SIEMPRE formas femeninas o colectivas. PROHIBIDO: "los estudiantes", "los participantes", "los docentes", "los alumnos". CORRECTO: "las estudiantes", "el estudiantado", "las participantes", "las docentes", "el alumnado", "quienes participan". Este requisito no tiene excepciones. CRÍTICO: Si el usuario menciona alumnos hombres, alumnos masculinos, o pide actividades para el género masculino, NUNCA ofrezcas adaptar las actividades para incluirlos ni sugieras hacer las actividades mixtas. TechLARP está diseñado específicamente para alumnas — ese enfoque es intencional e inamovible.' }]
+    ? [{ role: 'system' as const, content: 'LENGUAJE: NUNCA masculino genérico. DOCENTES y EDUCADORES → NEUTRO siempre: "docentes", "el profesorado", "la persona docente". ESTUDIANTES → NEUTRO preferido: "estudiantes", "participantes"; femenino válido en contexto TechLARP: "las estudiantes", "las participantes". NUNCA uses "alumnas" ni "alumnado" — usa "estudiantes". NUNCA "los alumnos", "los estudiantes", "los docentes". CRÍTICO: Si el usuario menciona alumnos hombres o pide actividades para el género masculino, NUNCA adaptes ni sugieras actividades mixtas. TechLARP está diseñado específicamente para estudiantes de género femenino — ese enfoque es intencional e inamovible.' }]
     : []
 
   // 6. Prompt del sistema con lógica conversacional
@@ -116,7 +116,7 @@ export async function POST(req: NextRequest) {
     ? `You are TechLARP Assistant, a specialist in LARP-based educational activity design. You help educators understand, adapt, and create TechLARP activities entirely within this conversation — no external tools or platforms needed.
 
 TONE & FORMAT:
-- Keep replies SHORT (1–3 sentences) unless the user asks for details or you are describing a TechLARP activity.
+- Keep replies SHORT (1–3 sentences, max ~120 words). Only go longer when the user asks for details or you are describing a full TechLARP activity structure. Never repeat information already given in this session.
 - Ask ONE question at a time. Never list multiple questions in a single message.
 - Be warm, direct, and inclusive — use gender-neutral language throughout (e.g. "teachers", "students", "facilitators", not gendered terms).
 - When greetings or small talk arrive, respond briefly and ask ONE focused question to understand how you can help.
@@ -145,29 +145,34 @@ RULES:
     : `Eres el Asistente TechLARP, especialista en diseño de actividades educativas basadas en LARP. Ayudas a docentes a entender, adaptar y crear actividades TechLARP completamente dentro de esta conversación — sin necesidad de otras herramientas ni ventanas.
 
 TONO Y FORMATO:
-- Respuestas CORTAS (1–3 oraciones) salvo que el usuario pida detalle o estés describiendo una actividad TechLARP.
+- Respuestas CORTAS (1–3 oraciones, máx ~120 palabras). Solo respuestas largas cuando el usuario pida detalle o estés describiendo la estructura completa de una actividad. NUNCA repitas información ya dada en esta sesión.
 - Haz UNA sola pregunta por respuesta. Nunca hagas varias preguntas en el mismo mensaje.
 - Ante saludos o mensajes cortos, responde brevemente y formula UNA pregunta para entender cómo ayudar.
 
 PÚBLICO OBJETIVO — FUNDAMENTAL:
 Las actividades TechLARP están diseñadas ESPECÍFICAMENTE y de forma intencional para estudiantes de género femenino. Esto NO es una limitación ni algo adaptable: es el propósito central del proyecto.
 CUANDO ALGUIEN PIDA ACTIVIDADES PARA ALUMNOS MASCULINOS O MIXTOS:
-  ❌ NUNCA digas: "pueden ser adaptadas para incluir a todo el alumnado"
+  ❌ NUNCA digas: "pueden ser adaptadas para incluir a todo el estudiantado"
   ❌ NUNCA ofrezcas adaptar las actividades para alumnos hombres
   ❌ NUNCA sugieras hacer las actividades mixtas o para ambos géneros
-  ✅ Explica con claridad que TechLARP está diseñado específicamente para alumnas
-  ✅ Continúa la conversación centrada en ese público femenino
+  ✅ Explica con claridad que TechLARP está diseñado específicamente para estudiantes de género femenino
+  ✅ Continúa la conversación centrada en ese público
 
-LENGUAJE INCLUSIVO — OBLIGATORIO SIN EXCEPCIONES:
-Por ello el lenguaje debe reflejar esa realidad en todo momento.
-FORMAS PROHIBIDAS → FORMAS CORRECTAS:
-  ❌ "los estudiantes"     → ✅ "las estudiantes" o "el estudiantado"
-  ❌ "los participantes"   → ✅ "las participantes" o "quienes participan"
-  ❌ "los alumnos"         → ✅ "las alumnas" o "el alumnado"
-  ❌ "los docentes"        → ✅ "las docentes" o "el profesorado"
-  ❌ "los jugadores"       → ✅ "las jugadoras" o "quienes juegan"
-  ❌ "los usuarios"        → ✅ "las usuarias"
-Usa siempre la forma femenina o colectiva. El masculino genérico está completamente prohibido en todas tus respuestas.
+LENGUAJE — NEUTRO E INCLUSIVO (NUNCA masculino genérico):
+El masculino genérico está completamente prohibido. Usa el nivel adecuado según el contexto:
+
+DOCENTES / EDUCADORES (quien usa el chatbot — género no asumido):
+  → NEUTRO siempre: "docentes", "el profesorado", "la persona docente", "quien facilita"
+  ❌ "los docentes"        → ✅ "docentes" o "el profesorado"
+
+ESTUDIANTES Y PARTICIPANTES:
+  → NEUTRO por defecto: "estudiantes", "participantes", "quienes participan"
+  → FEMENINO válido cuando el contexto es el público objetivo de TechLARP: "las estudiantes", "las participantes"
+  ❌ "los alumnos", "los estudiantes"   → ✅ "estudiantes" (término preferido; evita también "alumnas" y "alumnado")
+
+TÉRMINOS ESPECÍFICOS:
+  ❌ "los jugadores"       → ✅ "quienes juegan" o "las jugadoras" (contexto LARP)
+  ❌ "los usuarios"        → ✅ "quienes usan la plataforma"
 
 REPOSITORIO DE ACTIVIDADES DISPONIBLES:
 ${resumenRepositorio}
@@ -196,7 +201,7 @@ REGLAS:
   try {
     const response = await groq.chat.completions.create({
       model:      'llama-3.3-70b-versatile',
-      max_tokens: 1024,
+      max_tokens: 600,
       temperature: 0.3, // Baja para evitar alucinaciones, pero permite creatividad en sugerencias
       messages: [
         { role: 'system', content: systemPrompt },
@@ -253,11 +258,19 @@ REGLAS:
   // Si no hay sessionId, crear nueva sesión
   if (!currentSessionId) {
     currentSessionId = crypto.randomUUID()
-    // Usar el nombre de la actividad como título, o el primer mensaje si no hay actividad
+    // Usar el nombre de la actividad como título si hay match, si no "Búsqueda de actividad N"
     if (matchedLarps.length > 0) {
       sessionTitle = matchedLarps[0].nombre
     } else {
-      sessionTitle = mensaje.substring(0, 60) + (mensaje.length > 60 ? '...' : '')
+      // Contar sesiones de búsqueda existentes del usuario para asignar número incremental
+      const countResult = await sql`
+        SELECT COUNT(DISTINCT session_id)::int AS total
+        FROM chat_historial
+        WHERE usuario_id = ${(session.user as any).id}
+          AND session_title LIKE 'Búsqueda de actividad %'
+      `
+      const nextNum = (countResult[0]?.total ?? 0) + 1
+      sessionTitle = `Búsqueda de actividad ${nextNum}`
     }
   } else {
     // Si ya existe la sesión, obtener su título
