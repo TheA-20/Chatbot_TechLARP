@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation'
 import Image from 'next/image'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
+import { evalDict, type EvalLocale } from '@/lib/i18n/eval-dict'
 
 interface LarpRef {
   id: string
@@ -25,44 +26,17 @@ interface Mensaje {
   larps?: LarpRef[]
 }
 
-const ESCENARIOS_INFO = [
-  {
-    id: null,
-    key: 'libre',
-    label: 'Sin escenario',
-    desc: 'Conversacion libre sin objetivo asignado.',
-  },
-  {
-    id: 1,
-    key: '1',
-    label: 'E1 - Seleccion guiada',
-    desc: 'Busca una actividad para 5o Primaria, Matematicas y participacion femenina.',
-  },
-  {
-    id: 2,
-    key: '2',
-    label: 'E2 - Adaptacion',
-    desc: 'Adapta una actividad de Secundaria para 6o Primaria manteniendo el enfoque de inclusion.',
-  },
-  {
-    id: 3,
-    key: '3',
-    label: 'E3 - Apoyo formativo',
-    desc: 'Pide que el agente explique contenido tecnico fuera de tu dominio.',
-  },
-  {
-    id: 4,
-    key: '4',
-    label: 'E4 - Fuera de alcance',
-    desc: 'Prueba los limites del sistema con consultas probablemente fuera del repositorio.',
-  },
-  {
-    id: 5,
-    key: '5',
-    label: 'E5 - Exploracion libre',
-    desc: '~10 minutos de interaccion no guiada, como lo haria un docente real.',
-  },
-]
+function getScenariosInfo(lang: EvalLocale) {
+  const L = evalDict[lang]
+  return [
+    { id: null, key: 'libre', label: L.scenarioFreeLabel, desc: L.scenarioFreeDesc },
+    { id: 1,    key: '1',     label: L.scenario1Label,    desc: L.scenario1Desc },
+    { id: 2,    key: '2',     label: L.scenario2Label,    desc: L.scenario2Desc },
+    { id: 3,    key: '3',     label: L.scenario3Label,    desc: L.scenario3Desc },
+    { id: 4,    key: '4',     label: L.scenario4Label,    desc: L.scenario4Desc },
+    { id: 5,    key: '5',     label: L.scenario5Label,    desc: L.scenario5Desc },
+  ]
+}
 
 export default function EvaluacionChatPage() {
   const router = useRouter()
@@ -75,10 +49,10 @@ export default function EvaluacionChatPage() {
   const [input, setInput]                 = useState('')
   const [cargando, setCargando]           = useState(false)
   const [downloading, setDownloading]     = useState<string | null>(null)
+  const [lang, setLang]                   = useState<EvalLocale>('es')
 
   const [previewAbierto, setPreviewAbierto]   = useState(false)
   const [previewLarpId, setPreviewLarpId]     = useState<string | null>(null)
-  const [pdfLang, setPdfLang]                 = useState<'es' | 'en'>('es')
   const [previewData, setPreviewData]         = useState<LarpDetalle | null>(null)
   const [previewCargando, setPreviewCargando] = useState(false)
   const [previewTab, setPreviewTab]           = useState<'resumen' | 'misiones' | 'roles' | 'cartas'>('resumen')
@@ -98,6 +72,8 @@ export default function EvaluacionChatPage() {
   useEffect(() => {
     const nombre = sessionStorage.getItem('eval_nombre') ?? ''
     setNombreDocente(nombre)
+    const savedLang = sessionStorage.getItem('eval_lang')
+    if (savedLang === 'en' || savedLang === 'es') setLang(savedLang)
 
     async function cargarHistorial() {
       try {
@@ -151,7 +127,7 @@ export default function EvaluacionChatPage() {
   async function reiniciarEscenario() {
     const key   = escenario === null ? 'libre' : String(escenario)
     const label = ESCENARIOS_INFO.find(s => s.key === key)?.label ?? 'esta conversacion'
-    if (!window.confirm(`Reiniciar "${label}"?\nSe borraran todos los mensajes de este escenario.`)) return
+    if (!window.confirm(evalDict[lang].resetConfirm(label))) return
 
     try {
       await fetch(`/api/evaluacion/historial?escenario=${key}`, { method: 'DELETE' })
@@ -189,7 +165,7 @@ export default function EvaluacionChatPage() {
   async function handleDownloadPDF(id: string, nombre: string) {
     setDownloading(id)
     try {
-      const res = await fetch(`/api/evaluacion/edularp/${id}/pdf?lang=${pdfLang}`)
+      const res = await fetch(`/api/evaluacion/edularp/${id}/pdf?lang=${lang}`)
       if (!res.ok) throw new Error('Error')
       const blob = await res.blob()
       const url = URL.createObjectURL(blob)
@@ -212,7 +188,7 @@ export default function EvaluacionChatPage() {
         if (parts.length === 2) { (modified as any)[parts[0]][parts[1]] = val }
         else if (parts.length === 3) { (modified as any)[parts[0]][parseInt(parts[1])][parts[2]] = val }
       }
-      const res = await fetch(`/api/evaluacion/edularp/${previewLarpId}/pdf?lang=${pdfLang}`, {
+      const res = await fetch(`/api/evaluacion/edularp/${previewLarpId}/pdf?lang=${lang}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(modified),
@@ -244,7 +220,7 @@ export default function EvaluacionChatPage() {
         body: JSON.stringify({
           mensaje: msg,
           historial: mensajes.slice(-8).map(({ role, content }) => ({ role, content })),
-          locale: 'es',
+          locale: lang,
           contextLarps: lastLarps,
           escenario,
         }),
@@ -268,14 +244,21 @@ export default function EvaluacionChatPage() {
         setMensajes(m => [...m, { role: 'assistant', content: data.error ?? 'Error al obtener respuesta.' }])
       }
     } catch {
-      setMensajes(m => [...m, { role: 'assistant', content: 'Error de conexion. Intentalo de nuevo.' }])
+      setMensajes(m => [...m, { role: 'assistant', content: evalDict[lang].connError }])
     } finally {
       setCargando(false)
       inputRef.current?.focus()
     }
   }
 
+  const L = evalDict[lang]
+  const ESCENARIOS_INFO = getScenariosInfo(lang)
   const escenarioActual = ESCENARIOS_INFO.find(s => s.id === escenario)!
+
+  function changeLang(l: EvalLocale) {
+    setLang(l)
+    sessionStorage.setItem('eval_lang', l)
+  }
 
   return (
     <div className="h-screen bg-[#f7f7f8] flex overflow-hidden">
@@ -294,7 +277,7 @@ export default function EvaluacionChatPage() {
         {/* Lista de escenarios */}
         <nav className="flex-1 overflow-y-auto py-2">
           <p className="px-4 pt-1 pb-2 text-[10px] font-semibold text-gray-400 uppercase tracking-wider">
-            Escenarios
+            {L.sidebarScenarios}
           </p>
           {ESCENARIOS_INFO.map(s => {
             const key    = s.key
@@ -334,17 +317,17 @@ export default function EvaluacionChatPage() {
 
         {/* Botones inferiores */}
         <div className="px-4 py-3 border-t border-gray-100 space-y-2">
-          {/* Selector idioma PDF */}
+          {/* Selector de idioma — controla UI + agente + PDF */}
           <div className="flex items-center justify-between text-xs text-gray-400 pb-1">
-            <span>Idioma del PDF</span>
+            <span>{L.sidebarPdfLang}</span>
             <div className="flex gap-1">
               <button
-                onClick={() => setPdfLang('es')}
-                className={`px-2.5 py-1 rounded border transition-colors ${pdfLang === 'es' ? 'bg-violet-600 text-white border-violet-600' : 'bg-white text-gray-500 border-gray-200 hover:bg-gray-50'}`}
+                onClick={() => changeLang('es')}
+                className={`px-2.5 py-1 rounded border transition-colors ${lang === 'es' ? 'bg-violet-600 text-white border-violet-600' : 'bg-white text-gray-500 border-gray-200 hover:bg-gray-50'}`}
               >ES</button>
               <button
-                onClick={() => setPdfLang('en')}
-                className={`px-2.5 py-1 rounded border transition-colors ${pdfLang === 'en' ? 'bg-violet-600 text-white border-violet-600' : 'bg-white text-gray-500 border-gray-200 hover:bg-gray-50'}`}
+                onClick={() => changeLang('en')}
+                className={`px-2.5 py-1 rounded border transition-colors ${lang === 'en' ? 'bg-violet-600 text-white border-violet-600' : 'bg-white text-gray-500 border-gray-200 hover:bg-gray-50'}`}
               >EN</button>
             </div>
           </div>
@@ -353,7 +336,7 @@ export default function EvaluacionChatPage() {
             disabled={mensajes.length === 0 || cargando}
             className="w-full text-xs text-gray-400 hover:text-red-500 hover:bg-red-50 border border-gray-200 hover:border-red-200 disabled:opacity-40 disabled:cursor-not-allowed rounded-lg py-2 transition-colors"
           >
-            Reiniciar conversacion
+            {L.sidebarReset}
           </button>
           <button
             onClick={salir}
@@ -362,7 +345,7 @@ export default function EvaluacionChatPage() {
             <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
             </svg>
-            Salir de la sesion
+            {L.sidebarLeave}
           </button>
         </div>
       </aside>
@@ -389,7 +372,7 @@ export default function EvaluacionChatPage() {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
               </svg>
-              Vista previa
+              {L.headerPreview}
             </button>
           )}
         </header>
@@ -404,22 +387,20 @@ export default function EvaluacionChatPage() {
                     {nombreDocente ? `Hola, ${nombreDocente}!` : 'Hola!'}
                   </p>
                   <p className="text-sm text-gray-500 max-w-sm mx-auto">
-                    {escenario === null
-                      ? 'Puedes interactuar libremente sin un escenario asignado.'
-                      : escenarioActual.desc}
+                    {escenario === null ? L.greetingFree : escenarioActual.desc}
                   </p>
                 </div>
                 <div className="flex flex-col items-start">
                   <div className="max-w-[85%] rounded-2xl rounded-bl-sm px-4 py-3 text-sm leading-relaxed bg-white border border-gray-100 text-gray-800">
-                    Hola, soy el Asistente TechLARP. Estoy aqui para ayudarte a encontrar, entender o adaptar actividades TechLARP. Por donde empezamos?
+                    {L.welcomeMsg}
                   </div>
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   {[
-                    'Busco una actividad para mi clase',
-                    'Quiero adaptar una actividad a mi grupo',
-                    'Explicame como funciona una actividad TechLARP',
-                    'Que actividades hay disponibles',
+                    L.suggestion1,
+                    L.suggestion2,
+                    L.suggestion3,
+                    L.suggestion4,
                   ].map((s, i) => (
                     <button key={i} onClick={() => enviar(s)}
                       className="text-left text-xs text-gray-600 bg-white border border-gray-100 rounded-xl p-3 hover:border-violet-300 hover:bg-violet-50/30 transition-colors">
@@ -511,7 +492,7 @@ export default function EvaluacionChatPage() {
                 value={input}
                 onChange={e => setInput(e.target.value)}
                 onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); enviar() } }}
-                placeholder="Escribe tu mensaje..."
+                placeholder={L.inputPlaceholder}
                 className="flex-1 bg-transparent text-sm text-gray-800 placeholder-gray-400 resize-none outline-none"
                 disabled={cargando}
               />
@@ -533,7 +514,7 @@ export default function EvaluacionChatPage() {
       {previewAbierto && (
         <aside className="fixed right-0 top-0 bottom-0 w-[420px] bg-white border-l border-gray-200 overflow-y-auto z-30 flex flex-col">
           <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between flex-shrink-0">
-            <h2 className="text-sm font-semibold text-gray-900">Vista previa</h2>
+            <h2 className="text-sm font-semibold text-gray-900">{L.previewTitle}</h2>
             <button onClick={() => setPreviewAbierto(false)} className="text-gray-400 hover:text-gray-600">
               <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -551,7 +532,7 @@ export default function EvaluacionChatPage() {
                 {(['resumen', 'misiones', 'roles', 'cartas'] as const).map(tab => (
                   <button key={tab} onClick={() => setPreviewTab(tab)}
                     className={`py-3 text-xs font-medium border-b-2 transition-colors capitalize ${previewTab === tab ? 'border-violet-600 text-violet-600' : 'border-transparent text-gray-500 hover:text-gray-700'}`}>
-                    {tab}
+                    {tab === 'resumen' ? L.previewTabResumen : tab === 'misiones' ? L.previewTabMisiones : tab === 'roles' ? L.previewTabRoles : L.previewTabCartas}
                   </button>
                 ))}
               </div>
@@ -563,11 +544,11 @@ export default function EvaluacionChatPage() {
                     <div className="flex flex-wrap gap-2">
                       <span className="px-2 py-1 bg-violet-50 text-violet-700 rounded text-xs">{previewData.larp.nivel_educativo}</span>
                       <span className="px-2 py-1 bg-gray-100 text-gray-600 rounded text-xs">{previewData.larp.duracion_min} min</span>
-                      <span className="px-2 py-1 bg-gray-100 text-gray-600 rounded text-xs">{previewData.larp.num_participantes} participantes</span>
+                      <span className="px-2 py-1 bg-gray-100 text-gray-600 rounded text-xs">{previewData.larp.num_participantes} {L.previewParticipants}</span>
                     </div>
                     <p className="text-gray-600 text-xs leading-relaxed">{previewData.larp.asignaturas}</p>
                     <div>
-                      <p className="text-xs font-medium text-gray-700 mb-1">Descripcion</p>
+                      <p className="text-xs font-medium text-gray-700 mb-1">{L.previewTabResumen}</p>
                       {editingField === 'larp|descripcion' ? (
                         <textarea
                           className="w-full text-xs border border-violet-300 rounded-lg p-2 resize-none focus:outline-none focus:ring-1 focus:ring-violet-500"
@@ -588,7 +569,7 @@ export default function EvaluacionChatPage() {
                     </div>
                     {previewData.paralelos.length > 0 && (
                       <div>
-                        <p className="text-xs font-medium text-gray-700 mb-2">Paralelos narrativa vs mundo real</p>
+                        <p className="text-xs font-medium text-gray-700 mb-2">{L.previewStoryboard}</p>
                         <div className="space-y-2">
                           {previewData.paralelos.map((p, i) => (
                             <div key={i} className="bg-gray-50 rounded-lg p-2 text-xs">
@@ -602,7 +583,7 @@ export default function EvaluacionChatPage() {
                     )}
                     {previewData.objetivos.length > 0 && (
                       <div>
-                        <p className="text-xs font-medium text-gray-700 mb-2">Objetivos</p>
+                        <p className="text-xs font-medium text-gray-700 mb-2">{L.previewTabMisiones}</p>
                         <ul className="space-y-1">
                           {previewData.objetivos.map((o, i) => (
                             <li key={i} className="text-xs text-gray-600 flex gap-2">
@@ -672,7 +653,7 @@ export default function EvaluacionChatPage() {
                   disabled={!!downloading}
                   className="flex-1 text-xs bg-violet-600 hover:bg-violet-700 text-white rounded-lg py-2 transition-colors disabled:opacity-50"
                 >
-                  {downloading === previewLarpId ? 'Descargando...' : 'Descargar PDF original'}
+                  {downloading === previewLarpId ? L.previewDownloading : L.previewDownloadOriginal}
                 </button>
                 {Object.keys(previewEdits).length > 0 && (
                   <button
@@ -680,7 +661,7 @@ export default function EvaluacionChatPage() {
                     disabled={!!downloading}
                     className="flex-1 text-xs bg-gray-800 hover:bg-gray-900 text-white rounded-lg py-2 transition-colors disabled:opacity-50"
                   >
-                    Descargar PDF modificado
+                    {L.previewDownloadModified}
                   </button>
                 )}
                 </div>
@@ -688,7 +669,7 @@ export default function EvaluacionChatPage() {
             </div>
           ) : (
             <div className="flex-1 flex items-center justify-center">
-              <p className="text-xs text-gray-400">No se pudo cargar la actividad.</p>
+              <p className="text-xs text-gray-400">{L.previewFailed}</p>
             </div>
           )}
         </aside>

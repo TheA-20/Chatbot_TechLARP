@@ -1,6 +1,100 @@
 import { NextRequest, NextResponse } from 'next/server'
+import Groq from 'groq-sdk'
 import sql from '@/lib/db'
 import { generateEduLarpPDF, type EduLarpData } from '@/lib/pdf/edularp-pdf'
+
+const groq = new Groq({ apiKey: process.env.GROQ_API_KEY })
+
+async function translateData(data: EduLarpData): Promise<EduLarpData> {
+  const payload = {
+    nombre: data.nombre,
+    descripcion: data.descripcion,
+    storyboard: data.storyboard,
+    storyboard_alt: data.storyboard_alt,
+    asignaturas: data.asignaturas,
+    materiales: data.materiales,
+    evaluacion: data.evaluacion,
+    notas_docente: data.notas_docente,
+    competencias: data.competencias,
+    paralelos: data.paralelos.map(p => ({ narrativa: p.narrativa, mundo_real: p.mundo_real, proposito: p.proposito })),
+    misiones: data.misiones.map(m => ({ titulo: m.titulo, objetivo: m.objetivo, formato: m.formato, problema_larp: m.problema_larp, problema_real: m.problema_real, solucion: m.solucion, recursos: m.recursos })),
+    roles: data.roles.map(r => ({ nombre_rol: r.nombre_rol, nombre_habilidad: r.nombre_habilidad, desc_habilidad: r.desc_habilidad, uso_juego: r.uso_juego })),
+    cartas: data.cartas.map(c => ({ nombre: c.nombre, habilidad: c.habilidad, lore: c.lore })),
+    objetivos: data.objetivos.map(o => ({ tipo: o.tipo, descripcion: o.descripcion })),
+  }
+
+  const completion = await groq.chat.completions.create({
+    model: 'llama-3.3-70b-versatile',
+    temperature: 0.1,
+    max_tokens: 8192,
+    response_format: { type: 'json_object' },
+    messages: [
+      {
+        role: 'system',
+        content: `You are a professional translator. Translate all Spanish text values in the provided JSON object to English.
+Rules:
+- Return ONLY valid JSON with exactly the same structure as input.
+- Translate all string values; do NOT change keys.
+- For "objetivos[].tipo", do NOT translate it — keep as is.
+- Null or empty string values must remain null or empty string.
+- Preserve formatting, line breaks, and bullet points.`,
+      },
+      { role: 'user', content: JSON.stringify(payload) },
+    ],
+  })
+
+  let translated: any = {}
+  try {
+    translated = JSON.parse(completion.choices[0].message.content ?? '{}')
+  } catch { /* fallback: return original */ }
+
+  return {
+    ...data,
+    nombre:        translated.nombre        ?? data.nombre,
+    descripcion:   translated.descripcion   ?? data.descripcion,
+    storyboard:    translated.storyboard    ?? data.storyboard,
+    storyboard_alt: translated.storyboard_alt ?? data.storyboard_alt,
+    asignaturas:   translated.asignaturas   ?? data.asignaturas,
+    materiales:    translated.materiales    ?? data.materiales,
+    evaluacion:    translated.evaluacion    ?? data.evaluacion,
+    notas_docente: translated.notas_docente ?? data.notas_docente,
+    competencias:  translated.competencias  ?? data.competencias,
+    paralelos:     (translated.paralelos ?? data.paralelos).map((p: any, i: number) => ({
+      ...data.paralelos[i],
+      narrativa:   p.narrativa   ?? data.paralelos[i]?.narrativa,
+      mundo_real:  p.mundo_real  ?? data.paralelos[i]?.mundo_real,
+      proposito:   p.proposito   ?? data.paralelos[i]?.proposito,
+    })),
+    misiones: (translated.misiones ?? data.misiones).map((m: any, i: number) => ({
+      ...data.misiones[i],
+      titulo:         m.titulo         ?? data.misiones[i]?.titulo,
+      objetivo:       m.objetivo       ?? data.misiones[i]?.objetivo,
+      formato:        m.formato        ?? data.misiones[i]?.formato,
+      problema_larp:  m.problema_larp  ?? data.misiones[i]?.problema_larp,
+      problema_real:  m.problema_real  ?? data.misiones[i]?.problema_real,
+      solucion:       m.solucion       ?? data.misiones[i]?.solucion,
+      recursos:       m.recursos       ?? data.misiones[i]?.recursos,
+    })),
+    roles: (translated.roles ?? data.roles).map((r: any, i: number) => ({
+      ...data.roles[i],
+      nombre_rol:       r.nombre_rol       ?? data.roles[i]?.nombre_rol,
+      nombre_habilidad: r.nombre_habilidad ?? data.roles[i]?.nombre_habilidad,
+      desc_habilidad:   r.desc_habilidad   ?? data.roles[i]?.desc_habilidad,
+      uso_juego:        r.uso_juego        ?? data.roles[i]?.uso_juego,
+    })),
+    cartas: (translated.cartas ?? data.cartas).map((c: any, i: number) => ({
+      ...data.cartas[i],
+      nombre:    c.nombre    ?? data.cartas[i]?.nombre,
+      habilidad: c.habilidad ?? data.cartas[i]?.habilidad,
+      lore:      c.lore      ?? data.cartas[i]?.lore,
+    })),
+    objetivos: (translated.objetivos ?? data.objetivos).map((o: any, i: number) => ({
+      ...data.objetivos[i],
+      tipo:       data.objetivos[i]?.tipo,  // never translate tipo
+      descripcion: o.descripcion ?? data.objetivos[i]?.descripcion,
+    })),
+  }
+}
 
 async function validateEvalToken(req: NextRequest) {
   const token = req.cookies.get('eval_token')?.value
@@ -70,8 +164,9 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
     objetivos: objetivos as any[],
   }
 
-  const pdfBytes = await generateEduLarpPDF(data, lang)
-  const safeName = data.nombre
+  const pdfData = lang === 'en' ? await translateData(data) : data
+  const pdfBytes = await generateEduLarpPDF(pdfData, lang)
+  const safeName = pdfData.nombre
     .replace(/[^a-zA-Z0-9áéíóúñÁÉÍÓÚÑ\s-]/g, '')
     .replace(/\s+/g, '_')
     .slice(0, 60)
@@ -125,8 +220,9 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
     objetivos:        objetivos as any[],
   }
 
-  const pdfBytes = await generateEduLarpPDF(data, lang)
-  const safeName = (data.nombre ?? 'actividad')
+  const pdfData = lang === 'en' ? await translateData(data) : data
+  const pdfBytes = await generateEduLarpPDF(pdfData, lang)
+  const safeName = (pdfData.nombre ?? 'actividad')
     .replace(/[^a-zA-Z0-9áéíóúñÁÉÍÓÚÑ\s-]/g, '')
     .replace(/\s+/g, '_')
     .slice(0, 60)
