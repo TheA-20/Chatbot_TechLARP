@@ -274,14 +274,12 @@ REGLAS:
     textoRespuesta = textoRespuesta.replace(/<<VISTA_PREVIA>>\s*/g, '').trimStart()
   }
 
-  // 9. Determinar botones de descarga
+  // 9. Determinar botones de descarga — solo cuando la respuesta menciona explícitamente una actividad
   const respuestaLower = textoRespuesta.toLowerCase()
   const larpsEnRespuesta = allLarps.filter((l: any) =>
     respuestaLower.includes(l.nombre.toLowerCase())
   )
-  const larpsParaDescargaFinal: any[] = larpsEnRespuesta.length > 0
-    ? larpsEnRespuesta
-    : larpsParaDescarga
+  const larpsParaDescargaFinal: any[] = larpsEnRespuesta
 
   // Guardia anti-alucinación (log)
   const nombresAutorizados = allLarps.map((l: any) => l.nombre.toLowerCase())
