@@ -23,14 +23,13 @@ async function translateData(data: EduLarpData): Promise<EduLarpData> {
     objetivos: data.objetivos.map(o => ({ tipo: o.tipo, descripcion: o.descripcion })),
   }
 
-  const completion = await groq.chat.completions.create({
-    model: 'llama-3.3-70b-versatile',
-    temperature: 0.1,
+  const translateParams = {
+    temperature: 0.1 as const,
     max_tokens: 8192,
-    response_format: { type: 'json_object' },
+    response_format: { type: 'json_object' as const },
     messages: [
       {
-        role: 'system',
+        role: 'system' as const,
         content: `You are a professional translator. Translate all Spanish text values in the provided JSON object to English.
 Rules:
 - Return ONLY valid JSON with exactly the same structure as input.
@@ -39,9 +38,18 @@ Rules:
 - Null or empty string values must remain null or empty string.
 - Preserve formatting, line breaks, and bullet points.`,
       },
-      { role: 'user', content: JSON.stringify(payload) },
+      { role: 'user' as const, content: JSON.stringify(payload) },
     ],
-  })
+  }
+
+  let completion
+  try {
+    completion = await groq.chat.completions.create({ model: 'llama-3.3-70b-versatile', ...translateParams })
+  } catch (err: any) {
+    const isRateLimit = err?.status === 429 || err?.error?.code === 'rate_limit_exceeded'
+    if (!isRateLimit) throw err
+    completion = await groq.chat.completions.create({ model: 'llama-3.1-8b-instant', ...translateParams })
+  }
 
   let translated: any = {}
   try {

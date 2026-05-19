@@ -212,17 +212,33 @@ REGLAS:
 
   // 7. Llamada a Groq
   let textoRespuesta = ''
-  const response = await groq.chat.completions.create({
-    model:      'llama-3.3-70b-versatile',
-    max_tokens: 600,
-    temperature: 0.3,
-    messages: [
-      { role: 'system', content: systemPrompt },
-      ...historialLimitado,
-      ...refuerzoInclusivo,
-      { role: 'user', content: mensaje },
-    ],
-  })
+  const chatMessages = [
+    { role: 'system' as const, content: systemPrompt },
+    ...historialLimitado,
+    ...refuerzoInclusivo,
+    { role: 'user' as const, content: mensaje },
+  ]
+
+  let response
+  try {
+    response = await groq.chat.completions.create({
+      model: 'llama-3.3-70b-versatile',
+      max_tokens: 600,
+      temperature: 0.3,
+      messages: chatMessages,
+    })
+  } catch (err: any) {
+    // Fallback to smaller model on rate limit
+    const isRateLimit = err?.status === 429 || err?.error?.code === 'rate_limit_exceeded'
+    if (!isRateLimit) throw err
+    console.warn('[ChatEngine] Rate limit on primary model, falling back to llama-3.1-8b-instant')
+    response = await groq.chat.completions.create({
+      model: 'llama-3.1-8b-instant',
+      max_tokens: 600,
+      temperature: 0.3,
+      messages: chatMessages,
+    })
+  }
 
   textoRespuesta = response.choices[0]?.message?.content ?? ''
 
