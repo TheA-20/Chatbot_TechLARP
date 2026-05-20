@@ -50,6 +50,7 @@ REGLAS DE DISEÑO:
    - Distribuye el tiempo total entre misiones de forma realista (suma de duraciones ≤ duración total indicada)
    - Cada misión debe poder ejecutarse con el número de participantes indicado; especifica agrupaciones
    - Si el grupo es grande (>20), diseña misiones que funcionen en equipos paralelos
+   - LÍMITES OBLIGATORIOS: "duracion_min" debe estar entre 30 y 300 (minutos); "num_participantes" debe estar entre 2 y 40. Si el contexto indicado supera estos valores, ajusta al límite más cercano
 
 6. COMPLETITUD DEL JSON
    - NO dejes ningún campo de texto vacío ni con el valor de ejemplo de la plantilla
@@ -106,6 +107,7 @@ DESIGN RULES:
    - Distribute total time across missions realistically (sum of durations ≤ total duration indicated)
    - Each mission must work with the indicated number of participants; specify groupings
    - For large groups (>20), design missions that can run in parallel teams
+   - MANDATORY LIMITS: "duracion_min" must be between 30 and 300 (minutes); "num_participantes" must be between 2 and 40. If the indicated context exceeds these values, adjust to the nearest limit
 
 6. JSON COMPLETENESS
    - Do NOT leave any text field empty or with the template's placeholder value

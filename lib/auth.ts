@@ -3,7 +3,27 @@ import CredentialsProvider from 'next-auth/providers/credentials'
 import bcrypt from 'bcryptjs'
 import sql from '@/lib/db'
 
+// NextAuth v4 detrás de proxy SSL (UC3M): las cookies deben funcionar
+// sobre conexión HTTP interna aunque el cliente llegue por HTTPS.
+// Forzamos sameSite:'lax' y secure:false para evitar fallos de CSRF.
+const cookiePrefix = process.env.NODE_ENV === 'production' ? '__Secure-' : ''
+const useSecure    = false  // El proxy SSL de la UC3M termina HTTPS; internamente es HTTP
+
 export const authOptions: NextAuthOptions = {
+  cookies: {
+    sessionToken: {
+      name: `${cookiePrefix}next-auth.session-token`,
+      options: { httpOnly: true, sameSite: 'lax', path: '/', secure: useSecure },
+    },
+    callbackUrl: {
+      name: `${cookiePrefix}next-auth.callback-url`,
+      options: { httpOnly: true, sameSite: 'lax', path: '/', secure: useSecure },
+    },
+    csrfToken: {
+      name: `${cookiePrefix}next-auth.csrf-token`,
+      options: { httpOnly: true, sameSite: 'lax', path: '/', secure: useSecure },
+    },
+  },
   providers: [
     CredentialsProvider({
       name: 'Credenciales',
@@ -14,23 +34,28 @@ export const authOptions: NextAuthOptions = {
       async authorize(credentials) {
         if (!credentials?.email || !credentials?.password) return null
 
-        const [user] = await sql`
-          SELECT id, nombre, email, password_hash, rol, estado
-          FROM usuarios
-          WHERE email = ${credentials.email}
-        `
-        if (!user) return null
-        if (user.estado !== 'activo') return null
+        try {
+          const [user] = await sql`
+            SELECT id, nombre, email, password_hash, rol, estado
+            FROM usuarios
+            WHERE email = ${credentials.email}
+          `
+          if (!user) return null
+          if (user.estado !== 'activo') return null
 
-        const ok = await bcrypt.compare(credentials.password, user.password_hash)
-        if (!ok) return null
+          const ok = await bcrypt.compare(credentials.password, user.password_hash)
+          if (!ok) return null
 
-        // Actualizar último acceso
-        await sql`
-          UPDATE usuarios SET ultimo_acceso = now() WHERE id = ${user.id}
-        `
+          // Actualizar último acceso
+          await sql`
+            UPDATE usuarios SET ultimo_acceso = now() WHERE id = ${user.id}
+          `
 
-        return { id: user.id, name: user.nombre, email: user.email, rol: user.rol }
+          return { id: user.id, name: user.nombre, email: user.email, rol: user.rol }
+        } catch (err) {
+          console.error('[auth] authorize error:', err)
+          return null
+        }
       },
     }),
   ],

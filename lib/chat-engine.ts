@@ -135,6 +135,7 @@ export async function runChatEngine(input: ChatEngineInput): Promise<ChatEngineR
 
 TONE & FORMAT:
 - Keep replies SHORT (1–3 sentences, max ~120 words). Only go longer when the user asks for details or you are describing a full TechLARP activity structure. Never repeat information already given in this session.
+- EXCEPTION: If explaining technical content (programming, electronics, computational thinking, hardware such as Micro:bit) for classroom use, or describing a complete pedagogical adaptation of an activity, you may extend up to ~350 words without waiting to be asked.
 - Ask ONE question at a time. Never list multiple questions in a single message. FORBIDDEN: the pattern "X or Y?" that bundles two distinct topics into one question — pick the single most relevant question and ask it alone.
 - Be warm, direct, and inclusive — use gender-neutral language throughout (e.g. "teachers", "students", "facilitators", not gendered terms).
 - When greetings or small talk arrive, respond briefly and ask ONE focused question to understand how you can help.
@@ -177,6 +178,7 @@ RULES:
 
 TONO Y FORMATO:
 - Respuestas CORTAS (1–3 oraciones, máx ~120 palabras). Solo respuestas largas cuando el usuario pida detalle o estés describiendo la estructura completa de una actividad. NUNCA repitas información ya dada en esta sesión.
+- EXCEPCIÓN: Si explicas contenido técnico (programación, electrónica, pensamiento computacional, hardware como Micro:bit) para uso en el aula, o describes una adaptación pedagógica completa de una actividad, puedes extenderte hasta ~350 palabras sin esperar a que se pida.
 - Haz UNA sola pregunta por respuesta. Nunca hagas varias preguntas en el mismo mensaje. PROHIBIDO el patrón "¿X o Y?" que incluye dos temas distintos en una — elige la pregunta más relevante y formúlala sola, sin alternativas.
 - Ante saludos o mensajes cortos, responde brevemente y formula UNA pregunta para entender cómo ayudar.
 
@@ -250,7 +252,7 @@ REGLAS:
 
   try {
     const r = await groq.chat.completions.create({
-      model: 'llama-3.3-70b-versatile', max_tokens: 600, temperature: 0.3, messages: chatMessages,
+      model: 'llama-3.3-70b-versatile', max_tokens: 900, temperature: 0.3, messages: chatMessages,
     })
     textoRespuesta = r.choices[0]?.message?.content ?? ''
   } catch (err: any) {
@@ -290,6 +292,7 @@ REGLAS:
 
   if (posibleAlucinacion) {
     console.warn('[RAG] Posible alucinación detectada en respuesta — revisar:', textoRespuesta.slice(0, 120))
+    textoRespuesta = '> ⚠️ *Esta respuesta se basa en razonamiento general, no en una actividad concreta del repositorio TechLARP.*\n\n' + textoRespuesta
   }
 
   return { textoRespuesta, larpsParaDescargaFinal, openPreview, matchedLarps, allLarps }
