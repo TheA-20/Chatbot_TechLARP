@@ -17,7 +17,10 @@ const nextConfig = {
       ],
     },
   },
-  images: { remotePatterns: [{ protocol: 'https', hostname: '**' }] },
+  images: {
+    unoptimized: true,
+    remotePatterns: [{ protocol: 'https', hostname: '**' }],
+  },
   ...(isProd && {
     output: 'standalone',
   }),
