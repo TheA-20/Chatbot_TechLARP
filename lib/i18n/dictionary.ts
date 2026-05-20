@@ -18,6 +18,10 @@ const dict = {
     english: 'English',
     logout: 'Salir',
 
+    // ── Bienvenida ──
+    welcomeDescription: 'Descubre, personaliza y descarga actividades LARP diseñadas para el aprendizaje STEM en el aula.',
+    welcomeAccess: 'Acceder a la plataforma',
+
     // ── Auth — Login ──
     loginTitle: 'Iniciar sesión',
     loginSubtitle: 'Plataforma de actividades educativas',
@@ -358,6 +362,10 @@ const dict = {
     spanish: 'Español',
     english: 'English',
     logout: 'Sign out',
+
+    // ── Bienvenida ──
+    welcomeDescription: 'Discover, personalise and download LARP activities designed for STEM learning in the classroom.',
+    welcomeAccess: 'Access the platform',
 
     // ── Auth — Login ──
     loginTitle: 'Sign in',
