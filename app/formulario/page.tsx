@@ -390,11 +390,11 @@ export default function FormularioPage() {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
               </svg>
             </Link>
-            <Image src="/TechLARP_Symbol.png" alt="" width={28} height={28} className="h-7 w-7" />
+            <Image src={`${process.env.NEXT_PUBLIC_BASE_PATH || ''}/TechLARP_Symbol.png`} alt="" width={28} height={28} className="h-7 w-7" />
             <h1 className="text-sm font-medium">{t.formTitle}</h1>
           </div>
           <div className="flex justify-center pointer-events-none">
-            <Image src="/TechLARP-logo-02.png" alt="TechLARP" width={900} height={225} className="h-48 w-auto -my-[4.5rem]" priority />
+            <Image src={`${process.env.NEXT_PUBLIC_BASE_PATH || ''}/TechLARP-logo-02.png`} alt="TechLARP" width={900} height={225} className="h-48 w-auto -my-[4.5rem]" priority />
           </div>
           <div className="flex justify-end">
             <LanguageSwitcher />

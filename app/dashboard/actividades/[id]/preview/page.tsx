@@ -53,7 +53,7 @@ export default async function PreviewPage({ params, searchParams }: Props) {
             ← Volver a actividades
           </Link>
           <div className="flex justify-center flex-1">
-            <Image src="/TechLARP-logo-02.png" alt="TechLARP" width={900} height={225} className="h-20 w-auto" />
+            <Image src={`${process.env.NEXT_PUBLIC_BASE_PATH || ''}/TechLARP-logo-02.png`} alt="TechLARP" width={900} height={225} className="h-20 w-auto" />
           </div>
           <div className="w-32"></div>
         </div>

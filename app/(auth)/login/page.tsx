@@ -35,7 +35,7 @@ export default function LoginPage() {
     <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
       <div className="w-full max-w-sm">
         <div className="text-center mb-8">
-          <div className="flex justify-center mb-4"><Image src="/TechLARP-logo-02.png" alt="TechLARP" width={900} height={225} className="h-44 w-auto" priority /></div>
+          <div className="flex justify-center mb-4"><Image src={`${process.env.NEXT_PUBLIC_BASE_PATH || ''}/TechLARP-logo-02.png`} alt="TechLARP" width={900} height={225} className="h-44 w-auto" priority /></div>
           <p className="text-sm text-gray-500 mt-1">{t.loginSubtitle}</p>
         </div>
 

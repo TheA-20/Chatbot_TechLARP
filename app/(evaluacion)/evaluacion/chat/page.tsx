@@ -268,7 +268,7 @@ export default function EvaluacionChatPage() {
       <aside className="w-60 bg-white border-r border-gray-100 flex flex-col flex-shrink-0 z-20">
         {/* Logo + usuario */}
         <div className="px-4 py-4 border-b border-gray-100 flex items-center gap-2.5">
-          <Image src="/TechLARP_Symbol.png" alt="TechLARP" width={28} height={28} className="object-contain flex-shrink-0" />
+          <Image src={`${process.env.NEXT_PUBLIC_BASE_PATH || ''}/TechLARP_Symbol.png`} alt="TechLARP" width={28} height={28} className="object-contain flex-shrink-0" />
           <div className="min-w-0">
             <p className="text-xs font-semibold text-gray-900">TechLARP</p>
             {nombreDocente && <p className="text-[11px] text-gray-400 truncate">{nombreDocente}</p>}

@@ -14,7 +14,7 @@ export default function BienvenidaPage() {
         {/* Logo */}
         <div className="flex justify-center mb-6">
           <Image
-            src="/TechLARP-logo-02.png"
+            src={`${process.env.NEXT_PUBLIC_BASE_PATH || ''}/TechLARP-logo-02.png`}
             alt="TechLARP"
             width={900}
             height={225}

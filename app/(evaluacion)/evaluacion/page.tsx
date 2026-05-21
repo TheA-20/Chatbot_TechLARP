@@ -65,7 +65,7 @@ export default function EvaluacionPage() {
         {/* Logo + lang toggle */}
         <div className="flex justify-between items-start mb-6">
           <Image
-            src="/TechLARP-logo-02.png"
+            src={`${process.env.NEXT_PUBLIC_BASE_PATH || ''}/TechLARP-logo-02.png`}
             alt="TechLARP"
             width={220}
             height={55}

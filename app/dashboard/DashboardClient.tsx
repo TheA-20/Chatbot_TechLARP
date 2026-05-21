@@ -38,7 +38,7 @@ export default function DashboardClient({ userName, rol, stats, misLarps, notifs
             <span className="text-sm text-gray-400">{t.welcome}, {userName}</span>
           </div>
           <div className="flex justify-center pointer-events-none">
-            <Image src="/TechLARP-logo-02.png" alt="TechLARP" width={900} height={225} className="h-48 w-auto -my-[4.5rem]" priority />
+            <Image src={`${process.env.NEXT_PUBLIC_BASE_PATH || ''}/TechLARP-logo-02.png`} alt="TechLARP" width={900} height={225} className="h-48 w-auto -my-[4.5rem]" priority />
           </div>
           <div className="flex items-center justify-end gap-3">
             <LanguageSwitcher />

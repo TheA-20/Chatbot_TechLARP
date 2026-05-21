@@ -374,7 +374,7 @@ export default function ChatPage() {
               </div>
             </div>
             <div className="flex justify-center pointer-events-none">
-              <Image src="/TechLARP-logo-02.png" alt="TechLARP" width={900} height={225} className="h-48 w-auto -my-[4.5rem]" priority />
+              <Image src={`${process.env.NEXT_PUBLIC_BASE_PATH || ''}/TechLARP-logo-02.png`} alt="TechLARP" width={900} height={225} className="h-48 w-auto -my-[4.5rem]" priority />
             </div>
             <div className="flex items-center justify-end gap-2">
               <LanguageSwitcher />
