@@ -9,8 +9,8 @@ export const metadata: Metadata = {
   title:       'TechLARP — Plataforma de actividades educativas',
   description: 'Plataforma de gestión, recomendación y personalización de actividades TechLARP para educadores STEM',
   icons: {
-    icon: `${subpath}/TechLARP_Symbol.png`,
-    apple: `${subpath}/TechLARP_Symbol.png`,
+    icon: `${process.env.NEXT_PUBLIC_BASE_PATH || ''}/TechLARP_Symbol.png`,
+    apple: `${process.env.NEXT_PUBLIC_BASE_PATH || ''}/TechLARP_Symbol.png`,
   },
 }
 
@@ -35,7 +35,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           }}
         >
           <Image
-            src="/logo_DEI_vectorial.png"
+            src={`${subpath}/logo_DEI_vectorial.png`}
             alt="DEI Interactive Systems Group"
             width={140}
             height={70}
