@@ -62,17 +62,9 @@ export default function EvaluacionPage() {
     <div className="min-h-screen bg-gradient-to-br from-violet-50 to-purple-100 flex flex-col items-center justify-center px-4">
       <div className="w-full max-w-md bg-white rounded-2xl shadow-lg p-8">
 
-        {/* Logo + lang toggle */}
-        <div className="flex justify-between items-start mb-6">
-          <Image
-            src={`${process.env.NEXT_PUBLIC_BASE_PATH || ''}/TechLARP-logo-02.png`}
-            alt="TechLARP"
-            width={220}
-            height={55}
-            className="object-contain"
-            priority
-          />
-          <div className="flex gap-1 mt-1">
+        {/* Lang toggle */}
+        <div className="flex justify-end mb-2">
+          <div className="flex gap-1">
             <button
               onClick={() => changeLang('es')}
               className={`px-2.5 py-1 text-xs rounded border transition-colors ${lang === 'es' ? 'bg-violet-600 text-white border-violet-600' : 'bg-white text-gray-500 border-gray-200 hover:bg-gray-50'}`}
@@ -82,6 +74,18 @@ export default function EvaluacionPage() {
               className={`px-2.5 py-1 text-xs rounded border transition-colors ${lang === 'en' ? 'bg-violet-600 text-white border-violet-600' : 'bg-white text-gray-500 border-gray-200 hover:bg-gray-50'}`}
             >EN</button>
           </div>
+        </div>
+
+        {/* Logo centrado */}
+        <div className="flex justify-center mb-6">
+          <Image
+            src={`${process.env.NEXT_PUBLIC_BASE_PATH || ''}/TechLARP-logo-02.png`}
+            alt="TechLARP"
+            width={220}
+            height={55}
+            className="object-contain"
+            priority
+          />
         </div>
 
         <h1 className="text-2xl font-bold text-center text-gray-900 mb-1">
