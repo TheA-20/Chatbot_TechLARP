@@ -12,8 +12,7 @@ const nextConfig = {
     serverActions: {
       allowedOrigins: [
         'localhost:3000',
-        '163.117.137.118',
-        'dei.inf.uc3m.es',
+        ...(process.env.ALLOWED_ORIGINS ? process.env.ALLOWED_ORIGINS.split(',') : []),
       ],
     },
   },

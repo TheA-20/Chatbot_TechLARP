@@ -53,7 +53,8 @@ CREATE TABLE IF NOT EXISTS edularp (
   estado           TEXT NOT NULL DEFAULT 'borrador'
                      CHECK (estado IN ('borrador','revision','publicado','rechazado')),
   feedback_admin   TEXT,                        -- mensaje del admin al rechazar/aprobar
-  embedding        vector(1536),                -- para búsqueda semántica (opcional)
+  embedding_es     vector(768),                 -- búsqueda semántica en español (nomic-embed-text)
+  embedding_en     vector(768),                 -- búsqueda semántica en inglés (nomic-embed-text)
   creado_en        TIMESTAMPTZ DEFAULT now(),
   actualizado_en   TIMESTAMPTZ DEFAULT now()
 );
@@ -187,12 +188,23 @@ CREATE INDEX IF NOT EXISTS idx_edularp_autor
   ON edularp(autor_id);
 CREATE INDEX IF NOT EXISTS idx_edularp_nivel
   ON edularp(nivel_educativo);
+CREATE INDEX IF NOT EXISTS idx_edularp_creado_en
+  ON edularp(creado_en DESC);
 CREATE INDEX IF NOT EXISTS idx_edularp_fts
   ON edularp USING gin(to_tsvector('spanish', nombre || ' ' || descripcion || ' ' || storyboard));
 CREATE INDEX IF NOT EXISTS idx_chat_usuario
   ON chat_historial(usuario_id);
+CREATE INDEX IF NOT EXISTS idx_chat_sesion
+  ON chat_historial(session_id);
 CREATE INDEX IF NOT EXISTS idx_notif_usuario
   ON notificaciones(usuario_id, leida);
+
+-- Índices HNSW para búsqueda vectorial eficiente (pgvector)
+-- Requiere que las actividades tengan embeddings generados
+CREATE INDEX IF NOT EXISTS idx_edularp_embedding_es
+  ON edularp USING hnsw (embedding_es vector_cosine_ops);
+CREATE INDEX IF NOT EXISTS idx_edularp_embedding_en
+  ON edularp USING hnsw (embedding_en vector_cosine_ops);
 
 -- ─────────────────────────────────────────────
 -- TRIGGER: actualizar updated_at automáticamente

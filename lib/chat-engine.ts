@@ -65,6 +65,9 @@ export async function runChatEngine(input: ChatEngineInput): Promise<ChatEngineR
       ).join('\n')
     : 'No hay actividades publicadas aún.'
 
+  const SIMILARITY_MIN_THRESHOLD = 0.55   // mínimo para incluir resultado en contexto RAG
+  const SIMILARITY_HIGH_THRESHOLD = 0.72  // umbral para considerar coincidencia de alta relevancia
+
   // 2. Búsqueda semántica por similitud vectorial (RAG real)
   async function buscarPorSimilitud(texto: string, topK = 3): Promise<any[]> {
     try {
@@ -76,10 +79,16 @@ export async function runChatEngine(input: ChatEngineInput): Promise<ChatEngineR
         signal: AbortSignal.timeout(5000),
       })
 
-      if (!embedRes.ok) return []
+      if (!embedRes.ok) {
+        console.error('[chat-engine] Embedding request failed:', embedRes.status, await embedRes.text().catch(() => ''))
+        return []
+      }
 
       const { embedding } = await embedRes.json() as { embedding: number[] }
-      if (!Array.isArray(embedding) || embedding.length !== 768) return []
+      if (!Array.isArray(embedding) || embedding.length !== 768) {
+        console.error('[chat-engine] Embedding inválido: longitud esperada 768, recibida', embedding?.length)
+        return []
+      }
 
       const vecStr = `[${embedding.join(',')}]`
       const embeddingCol = isEN ? 'embedding_en' : 'embedding_es'
@@ -96,8 +105,9 @@ export async function runChatEngine(input: ChatEngineInput): Promise<ChatEngineR
         LIMIT ${topK}
       `
 
-      return results.filter((r: any) => Number(r.similitud) > 0.55)
-    } catch {
+      return results.filter((r: any) => Number(r.similitud) > SIMILARITY_MIN_THRESHOLD)
+    } catch (err) {
+      console.error('[chat-engine] Error en búsqueda por similitud:', err)
       return []
     }
   }
@@ -105,7 +115,7 @@ export async function runChatEngine(input: ChatEngineInput): Promise<ChatEngineR
   const matchedLarps = await buscarPorSimilitud(mensaje, 3)
 
   // 3. Construir contexto detallado con las actividades recuperadas
-  const highSimilarityMatches = matchedLarps.filter((l: any) => Number(l.similitud) > 0.72)
+  const highSimilarityMatches = matchedLarps.filter((l: any) => Number(l.similitud) > SIMILARITY_HIGH_THRESHOLD)
   const larpsParaDescarga: any[] = highSimilarityMatches.length > 0
     ? highSimilarityMatches
     : (contextLarps as any[])

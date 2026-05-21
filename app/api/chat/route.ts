@@ -11,6 +11,7 @@ export async function POST(req: NextRequest) {
 
   const { mensaje, historial = [], locale = 'es', sessionId = null, contextLarps = [] } = await req.json()
   if (!mensaje?.trim()) return NextResponse.json({ error: 'Mensaje vacío' }, { status: 400 })
+  if (mensaje.length > 2000) return NextResponse.json({ error: 'Mensaje demasiado largo (máx. 2000 caracteres)' }, { status: 400 })
 
   // Determinar si necesitamos crear una nueva sesión
   let currentSessionId = sessionId

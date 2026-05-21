@@ -3,11 +3,12 @@ import CredentialsProvider from 'next-auth/providers/credentials'
 import bcrypt from 'bcryptjs'
 import sql from '@/lib/db'
 
-// NextAuth v4 detrás de proxy SSL (UC3M): Node.js corre en HTTP interno.
-// El prefijo __Secure- requiere el atributo Secure=true, incompatible con
-// terminación SSL en nginx. Usamos prefijo vacío + secure:false.
-const cookiePrefix = ''
-const useSecure    = false  // El proxy SSL de la UC3M termina HTTPS; internamente es HTTP
+// NextAuth v4 detrás de proxy SSL (UC3M): el proxy termina HTTPS externamente;
+// internamente la conexión es HTTP, por lo que secure:false es necesario.
+// El prefijo __Secure- requiere secure:true — si secure es false, el navegador
+// rechaza la cookie y la sesión no se establece. Por eso el prefijo debe ser ''.
+const useSecure    = process.env.NEXTAUTH_SECURE === 'true'
+const cookiePrefix = useSecure ? '__Secure-' : ''
 
 export const authOptions: NextAuthOptions = {
   cookies: {
