@@ -3,10 +3,10 @@ import CredentialsProvider from 'next-auth/providers/credentials'
 import bcrypt from 'bcryptjs'
 import sql from '@/lib/db'
 
-// NextAuth v4 detrás de proxy SSL (UC3M): las cookies deben funcionar
-// sobre conexión HTTP interna aunque el cliente llegue por HTTPS.
-// Forzamos sameSite:'lax' y secure:false para evitar fallos de CSRF.
-const cookiePrefix = process.env.NODE_ENV === 'production' ? '__Secure-' : ''
+// NextAuth v4 detrás de proxy SSL (UC3M): Node.js corre en HTTP interno.
+// El prefijo __Secure- requiere el atributo Secure=true, incompatible con
+// terminación SSL en nginx. Usamos prefijo vacío + secure:false.
+const cookiePrefix = ''
 const useSecure    = false  // El proxy SSL de la UC3M termina HTTPS; internamente es HTTP
 
 export const authOptions: NextAuthOptions = {
