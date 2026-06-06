@@ -18,7 +18,7 @@ export async function POST(req: NextRequest) {
     UPDATE edularp
     SET estado = 'rechazado', feedback_admin = ${motivo}
     WHERE id = ${edularp_id}
-      AND estado IN ('revision', 'lm_analyzed')
+      AND estado IN ('revision', 'pending_review', 'lm_analyzed', 'under_review')
     RETURNING id, autor_id
   `
   if (result.length === 0) {
