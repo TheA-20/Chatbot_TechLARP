@@ -3,7 +3,20 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import sql from '@/lib/db'
 
-const OLLAMA_URL = process.env.OLLAMA_URL ?? 'http://localhost:11434'
+// SSRF guard: OLLAMA_URL must point to localhost only
+function validateOllamaUrl(raw: string): string {
+  let parsed: URL
+  try { parsed = new URL(raw) } catch {
+    throw new Error(`[aprobar] OLLAMA_URL is not a valid URL: "${raw}"`)
+  }
+  const allowed = ['localhost', '127.0.0.1', '::1']
+  if (!allowed.includes(parsed.hostname)) {
+    throw new Error(`[aprobar] OLLAMA_URL hostname "${parsed.hostname}" is not allowed.`)
+  }
+  return raw
+}
+
+const OLLAMA_URL = validateOllamaUrl(process.env.OLLAMA_URL ?? 'http://localhost:11434')
 
 // Genera el embedding de una actividad recién aprobada y lo persiste en la BD.
 // Fire-and-forget: los errores se loguean pero no bloquean la respuesta al admin.
@@ -66,14 +79,19 @@ export async function POST(req: NextRequest) {
 
   const { edularp_id, feedback } = await req.json()
 
-  await sql`
+  const result = await sql`
     UPDATE edularp
     SET estado = 'publicado', feedback_admin = ${feedback ?? null}
     WHERE id = ${edularp_id}
+      AND estado IN ('revision', 'lm_analyzed')
+    RETURNING id, autor_id
   `
+  if (result.length === 0) {
+    return NextResponse.json({ error: 'Actividad no encontrada o no está en estado revisable' }, { status: 409 })
+  }
 
   // Notificar al autor
-  const [larp] = await sql`SELECT autor_id FROM edularp WHERE id = ${edularp_id}`
+  const larp = result[0]
   if (larp?.autor_id) {
     await sql`
       INSERT INTO notificaciones (usuario_id, edularp_id, tipo, mensaje)

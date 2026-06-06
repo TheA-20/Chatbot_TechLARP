@@ -3,7 +3,10 @@ import sql from '@/lib/db'
 
 // POST /api/evaluacion/inicio
 // Body: { nombre: string }
-// Identifica al evaluador por nombre, reutiliza sesión activa o crea una nueva
+// Siempre crea una sesión nueva — la recuperación se realiza exclusivamente a través
+// de la cookie httpOnly eval_token (que el servidor devuelve en esta misma respuesta).
+// No se reutiliza sesión por nombre para evitar que un atacante que conozca el nombre
+// del evaluador pueda obtener su token de sesión (SEC-11).
 export async function POST(req: NextRequest) {
   const body = await req.json().catch(() => null)
   const nombre = body?.nombre?.trim()
@@ -17,38 +20,16 @@ export async function POST(req: NextRequest) {
 
   let sesionId: string
   let token: string
-  let esRetorno = false
 
   try {
-    // Buscar sesión activa para este nombre (insensible a mayúsculas)
-    const [existente] = await sql`
-      SELECT id, token FROM sesiones_evaluacion
-      WHERE lower(nombre_evaluador) = lower(${nombre})
-        AND expira_en > now()
-      ORDER BY creado_en DESC
-      LIMIT 1
+    // Siempre crear sesión nueva — no reutilizar por nombre
+    const [nueva] = await sql`
+      INSERT INTO sesiones_evaluacion (nombre_evaluador)
+      VALUES (${nombre})
+      RETURNING id, token
     `
-
-    if (existente) {
-      // Reutilizar sesión — extender expiración otras 48h
-      await sql`
-        UPDATE sesiones_evaluacion
-        SET expira_en = now() + INTERVAL '48 hours'
-        WHERE id = ${existente.id}
-      `
-      sesionId = existente.id
-      token = existente.token
-      esRetorno = true
-    } else {
-      // Crear nueva sesión
-      const [nueva] = await sql`
-        INSERT INTO sesiones_evaluacion (nombre_evaluador)
-        VALUES (${nombre})
-        RETURNING id, token
-      `
-      sesionId = nueva.id
-      token = nueva.token
-    }
+    sesionId = nueva.id
+    token = nueva.token
   } catch (err) {
     console.error('[evaluacion/inicio] DB error:', err)
     return NextResponse.json(
@@ -57,7 +38,7 @@ export async function POST(req: NextRequest) {
     )
   }
 
-  const res = NextResponse.json({ ok: true, nombre, sesionId, esRetorno })
+  const res = NextResponse.json({ ok: true, nombre, sesionId, esRetorno: false })
 
   // Cookie httpOnly — no accesible desde JS, expira en 48h
   // secure:true en producción (HTTPS), false en desarrollo local (HTTP)

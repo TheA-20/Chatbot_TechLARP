@@ -70,7 +70,20 @@ export async function PATCH(req: NextRequest) {
     return NextResponse.json({ error: 'Sin permisos' }, { status: 403 })
   }
 
+  const VALID_ESTADOS = ['activo', 'pendiente', 'suspendido'] as const
   const { usuario_id, estado } = await req.json()
-  await sql`UPDATE usuarios SET estado = ${estado} WHERE id = ${usuario_id}`
+
+  if (!VALID_ESTADOS.includes(estado)) {
+    return NextResponse.json({ error: `Estado inválido. Valores permitidos: ${VALID_ESTADOS.join(', ')}` }, { status: 400 })
+  }
+
+  const result = await sql`
+    UPDATE usuarios SET estado = ${estado}
+    WHERE id = ${usuario_id} AND rol != 'admin'
+    RETURNING id
+  `
+  if (result.length === 0) {
+    return NextResponse.json({ error: 'Usuario no encontrado o no modificable' }, { status: 404 })
+  }
   return NextResponse.json({ ok: true })
 }

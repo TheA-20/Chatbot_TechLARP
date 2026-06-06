@@ -23,6 +23,9 @@ export async function POST(req: NextRequest) {
   if (!mensaje?.trim()) {
     return NextResponse.json({ error: 'Mensaje vacío' }, { status: 400 })
   }
+  if (mensaje.length > 2000) return NextResponse.json({ error: 'Mensaje demasiado largo (máx. 2000 caracteres)' }, { status: 400 })
+  if (!Array.isArray(historial) || historial.length > 20) return NextResponse.json({ error: 'Historial inválido o demasiado largo (máx. 20 turnos)' }, { status: 400 })
+  if (!Array.isArray(contextLarps) || contextLarps.length > 10) return NextResponse.json({ error: 'contextLarps inválido o demasiado largo (máx. 10 actividades)' }, { status: 400 })
 
   // 2. Ejecutar motor de chat compartido (misma lógica que /api/chat)
   let textoRespuesta = ''

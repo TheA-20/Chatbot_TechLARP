@@ -12,6 +12,8 @@ export async function POST(req: NextRequest) {
   const { mensaje, historial = [], locale = 'es', sessionId = null, contextLarps = [] } = await req.json()
   if (!mensaje?.trim()) return NextResponse.json({ error: 'Mensaje vacío' }, { status: 400 })
   if (mensaje.length > 2000) return NextResponse.json({ error: 'Mensaje demasiado largo (máx. 2000 caracteres)' }, { status: 400 })
+  if (!Array.isArray(historial) || historial.length > 20) return NextResponse.json({ error: 'Historial inválido o demasiado largo (máx. 20 turnos)' }, { status: 400 })
+  if (!Array.isArray(contextLarps) || contextLarps.length > 10) return NextResponse.json({ error: 'contextLarps inválido o demasiado largo (máx. 10 actividades)' }, { status: 400 })
 
   // Determinar si necesitamos crear una nueva sesión
   let currentSessionId = sessionId
@@ -81,13 +83,6 @@ export async function POST(req: NextRequest) {
       ${larpsUsados},
       now()
     )
-  `
-
-  // Actualizar la fecha de actualización de todos los mensajes de esta sesión
-  await sql`
-    UPDATE chat_historial 
-    SET actualizado_en = now() 
-    WHERE session_id = ${currentSessionId} AND usuario_id = ${(session.user as any).id}
   `
 
   return NextResponse.json({

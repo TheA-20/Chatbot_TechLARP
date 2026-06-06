@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import Groq from 'groq-sdk'
 import sql from '@/lib/db'
+import { timingSafeEqual } from 'crypto'
 
 const groq = new Groq({ apiKey: process.env.GROQ_API_KEY! })
 
@@ -56,7 +57,17 @@ export async function POST(
   // Allow internal server-to-server calls (validated by secret token) or admin session
   const internalHeader = req.headers.get('x-internal-token')
   const internalSecret = process.env.INTERNAL_API_SECRET
-  const isInternalCall = internalSecret && internalHeader === internalSecret
+  // Guard: if INTERNAL_API_SECRET is unset, never allow bypass (prevents open endpoint on default docker compose)
+  let isInternalCall = false
+  if (internalSecret && internalHeader) {
+    try {
+      const a = Buffer.from(internalHeader)
+      const b = Buffer.from(internalSecret)
+      isInternalCall = a.length === b.length && timingSafeEqual(a, b)
+    } catch {
+      isInternalCall = false
+    }
+  }
   if (!isInternalCall) {
     const { getServerSession } = await import('next-auth')
     const { authOptions } = await import('@/lib/auth')

@@ -14,13 +14,18 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'El motivo de rechazo es obligatorio' }, { status: 400 })
   }
 
-  await sql`
+  const result = await sql`
     UPDATE edularp
     SET estado = 'rechazado', feedback_admin = ${motivo}
     WHERE id = ${edularp_id}
+      AND estado IN ('revision', 'lm_analyzed')
+    RETURNING id, autor_id
   `
+  if (result.length === 0) {
+    return NextResponse.json({ error: 'Actividad no encontrada o no está en estado revisable' }, { status: 409 })
+  }
 
-  const [larp] = await sql`SELECT autor_id FROM edularp WHERE id = ${edularp_id}`
+  const larp = result[0]
   if (larp?.autor_id) {
     await sql`
       INSERT INTO notificaciones (usuario_id, edularp_id, tipo, mensaje)

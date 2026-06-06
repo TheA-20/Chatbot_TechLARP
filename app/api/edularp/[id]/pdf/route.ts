@@ -24,11 +24,14 @@ export async function GET(
   }
 
   // 3. Consultar la actividad con todas sus relaciones
+  // Only the author or an admin may generate the PDF (prevents forge of arbitrary content).
+  const userSession = session.user as any
   const [edularp] = await sql`
     SELECT e.*, u.nombre AS autor_nombre
     FROM edularp e
     LEFT JOIN usuarios u ON u.id = e.autor_id
-    WHERE e.id = ${id} AND e.estado = 'publicado'
+    WHERE e.id = ${id}
+      AND (e.estado = 'publicado' OR e.autor_id = ${userSession.id} OR ${userSession.rol} = 'admin')
   `
 
   if (!edularp) {

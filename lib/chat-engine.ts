@@ -4,6 +4,27 @@ import sql from '@/lib/db'
 const groq = new Groq({ apiKey: process.env.GROQ_API_KEY! })
 
 // ---------------------------------------------------------------------------
+// SSRF guard — OLLAMA_URL must resolve to localhost/127.0.0.1 only.
+// Prevents an attacker from setting OLLAMA_URL to a cloud metadata endpoint.
+// ---------------------------------------------------------------------------
+function validateOllamaUrl(raw: string): string {
+  let parsed: URL
+  try { parsed = new URL(raw) } catch {
+    throw new Error(`[chat-engine] OLLAMA_URL is not a valid URL: "${raw}"`)
+  }
+  const allowed = ['localhost', '127.0.0.1', '::1']
+  if (!allowed.includes(parsed.hostname)) {
+    throw new Error(
+      `[chat-engine] OLLAMA_URL hostname "${parsed.hostname}" is not allowed. ` +
+      'Only localhost/127.0.0.1 is permitted.'
+    )
+  }
+  return raw
+}
+
+const OLLAMA_BASE_URL = validateOllamaUrl(process.env.OLLAMA_URL ?? 'http://localhost:11434')
+
+// ---------------------------------------------------------------------------
 // Ollama fallback — OpenAI-compatible endpoint, no rate limit, runs locally
 // ---------------------------------------------------------------------------
 async function ollamaChat(
@@ -11,7 +32,7 @@ async function ollamaChat(
   maxTokens: number,
   temperature: number,
 ): Promise<string> {
-  const ollamaUrl = process.env.OLLAMA_URL ?? 'http://localhost:11434'
+  const ollamaUrl = OLLAMA_BASE_URL
   const model     = process.env.OLLAMA_CHAT_MODEL ?? 'llama3.2'
   const res = await fetch(`${ollamaUrl}/v1/chat/completions`, {
     method:  'POST',
@@ -91,17 +112,18 @@ export async function runChatEngine(input: ChatEngineInput): Promise<ChatEngineR
       }
 
       const vecStr = `[${embedding.join(',')}]`
-      const embeddingCol = isEN ? 'embedding_en' : 'embedding_es'
+      // Use tagged-template column identifiers instead of sql.unsafe() to avoid injection risk
+      const col = isEN ? sql`embedding_en` : sql`embedding_es`
 
       const results = await sql`
         SELECT
           id, nombre, descripcion, asignaturas, nivel_educativo,
           duracion_min, num_participantes,
-          1 - (${sql.unsafe(embeddingCol)} <=> ${vecStr}::vector) AS similitud
+          1 - (${col} <=> ${vecStr}::vector) AS similitud
         FROM edularp
         WHERE estado = 'publicado'
-          AND ${sql.unsafe(embeddingCol)} IS NOT NULL
-        ORDER BY ${sql.unsafe(embeddingCol)} <=> ${vecStr}::vector
+          AND ${col} IS NOT NULL
+        ORDER BY ${col} <=> ${vecStr}::vector
         LIMIT ${topK}
       `
 
@@ -289,10 +311,19 @@ REGLAS:
   }
 
   // 9. Determinar botones de descarga — solo cuando la respuesta menciona explícitamente una actividad
+  // Se construye un Set de nombres mencionados de forma exacta (coincidencia de palabra completa)
+  // para evitar falsos positivos cuando un nombre es subconjunto de otro (e.g. "Robótica" vs "Robótica Avanzada").
   const respuestaLower = textoRespuesta.toLowerCase()
-  const larpsEnRespuesta = allLarps.filter((l: any) =>
-    respuestaLower.includes(l.nombre.toLowerCase())
+  const nombresEnRespuesta = new Set<string>(
+    allLarps
+      .map((l: any) => l.nombre.toLowerCase())
+      .filter((nombre: string) => {
+        // Escapar caracteres especiales de regex
+        const escaped = nombre.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+        return new RegExp(`(?<![\\w\u00C0-\u024F])${escaped}(?![\\w\u00C0-\u024F])`, 'i').test(respuestaLower)
+      })
   )
+  const larpsEnRespuesta = allLarps.filter((l: any) => nombresEnRespuesta.has(l.nombre.toLowerCase()))
   const larpsParaDescargaFinal: any[] = larpsEnRespuesta
 
   // Guardia anti-alucinación (log)
