@@ -25,13 +25,18 @@ export default async function PreviewPage({ params, searchParams }: Props) {
 
   if (!larp) return redirect('/dashboard/actividades')
 
-  const [paralelos, misiones, roles, cartas, objetivos] = await Promise.all([
-    sql`SELECT * FROM paralelos_realidad WHERE edularp_id = ${params.id} ORDER BY orden`,
-    sql`SELECT * FROM misiones WHERE edularp_id = ${params.id} ORDER BY orden`,
-    sql`SELECT * FROM roles_participantes WHERE edularp_id = ${params.id} ORDER BY orden`,
-    sql`SELECT * FROM cartas_juego WHERE edularp_id = ${params.id} ORDER BY orden`,
-    sql`SELECT * FROM objetivos WHERE edularp_id = ${params.id}`,
-  ])
+  let paralelos: any[] = [], misiones: any[] = [], roles: any[] = [], cartas: any[] = [], objetivos: any[] = []
+  try {
+    ;[paralelos, misiones, roles, cartas, objetivos] = await Promise.all([
+      sql`SELECT * FROM paralelos_realidad WHERE edularp_id = ${params.id} ORDER BY orden`,
+      sql`SELECT * FROM misiones WHERE edularp_id = ${params.id} ORDER BY orden`,
+      sql`SELECT * FROM roles_participantes WHERE edularp_id = ${params.id} ORDER BY orden`,
+      sql`SELECT * FROM cartas_juego WHERE edularp_id = ${params.id} ORDER BY orden`,
+      sql`SELECT * FROM objetivos WHERE edularp_id = ${params.id}`,
+    ])
+  } catch (err) {
+    console.error('[preview] DB error loading larp detail:', err)
+  }
 
   return (
     <div className="min-h-screen bg-gray-50">

@@ -10,7 +10,8 @@ async function getSesion(req: NextRequest) {
       WHERE token = ${token} AND expira_en > now()
     `
     return sesion ?? null
-  } catch {
+  } catch (err) {
+    console.error('[getSesion] DB error:', err)
     return null
   }
 }
