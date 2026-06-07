@@ -39,7 +39,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             alt="DEI Interactive Systems Group"
             width={140}
             height={70}
-            style={{ objectFit: 'contain', mixBlendMode: 'multiply' }}
+            style={{ height: 'auto', maxWidth: '140px', mixBlendMode: 'multiply' }}
             priority={false}
           />
         </div>

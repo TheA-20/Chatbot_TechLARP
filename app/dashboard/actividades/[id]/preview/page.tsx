@@ -25,24 +25,12 @@ export default async function PreviewPage({ params, searchParams }: Props) {
 
   if (!larp) return redirect('/dashboard/actividades')
 
-  const [paralelos] = await Promise.all([
-    sql`SELECT * FROM paralelos_realidad WHERE edularp_id = ${params.id} ORDER BY orden`
-  ])
-
-  const [misiones] = await Promise.all([
-    sql`SELECT * FROM misiones WHERE edularp_id = ${params.id} ORDER BY orden`
-  ])
-
-  const [roles] = await Promise.all([
-    sql`SELECT * FROM roles_participantes WHERE edularp_id = ${params.id} ORDER BY orden`
-  ])
-
-  const [cartas] = await Promise.all([
-    sql`SELECT * FROM cartas_juego WHERE edularp_id = ${params.id} ORDER BY orden`
-  ])
-
-  const [objetivos] = await Promise.all([
-    sql`SELECT * FROM objetivos WHERE edularp_id = ${params.id}`
+  const [paralelos, misiones, roles, cartas, objetivos] = await Promise.all([
+    sql`SELECT * FROM paralelos_realidad WHERE edularp_id = ${params.id} ORDER BY orden`,
+    sql`SELECT * FROM misiones WHERE edularp_id = ${params.id} ORDER BY orden`,
+    sql`SELECT * FROM roles_participantes WHERE edularp_id = ${params.id} ORDER BY orden`,
+    sql`SELECT * FROM cartas_juego WHERE edularp_id = ${params.id} ORDER BY orden`,
+    sql`SELECT * FROM objetivos WHERE edularp_id = ${params.id}`,
   ])
 
   return (

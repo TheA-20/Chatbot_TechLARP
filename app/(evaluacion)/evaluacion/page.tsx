@@ -83,7 +83,7 @@ export default function EvaluacionPage() {
             alt="TechLARP"
             width={220}
             height={55}
-            className="object-contain"
+            style={{ height: 'auto', maxWidth: '220px' }}
             priority
           />
         </div>

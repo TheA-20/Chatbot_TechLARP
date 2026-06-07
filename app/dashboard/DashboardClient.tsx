@@ -1,5 +1,6 @@
 'use client'
 import Link from 'next/link'
+import { signOut } from 'next-auth/react'
 import { useI18n } from '@/lib/i18n/context'
 import Image from 'next/image'
 import { LanguageSwitcher } from '@/app/components/LanguageSwitcher'
@@ -46,7 +47,7 @@ export default function DashboardClient({ userName, rol, stats, misLarps, notifs
               <Link href="/admin/revision" className="btn-secondary text-xs">{t.adminPanel}</Link>
             )}
             <Link href="/chat" className="btn-primary text-xs">{t.chatbot}</Link>
-            <Link href="/api/auth/signout" className="text-xs text-gray-400 hover:text-gray-600">{t.logout}</Link>
+            <button onClick={() => signOut({ callbackUrl: '/login' })} className="text-xs text-gray-400 hover:text-gray-600">{t.logout}</button>
           </div>
         </div>
       </header>
