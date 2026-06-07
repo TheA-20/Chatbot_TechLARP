@@ -5,7 +5,7 @@ services:
     environment:
       POSTGRES_DB: edularp
       POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: password_segura
+      POSTGRES_PASSWORD: "&XL)7]1ttpEKQ:Na#L_]"
     ports:
       - "127.0.0.1:5432:5432"
     volumes:
