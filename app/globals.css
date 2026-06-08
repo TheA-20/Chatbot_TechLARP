@@ -14,7 +14,7 @@
 @layer components {
   .btn-primary {
     @apply bg-primary text-white px-4 py-2 rounded-lg text-sm font-medium
-           hover:opacity-90 transition-opacity disabled:opacity-50;
+           hover:opacity-90 transition-opacity disabled:opacity-50 min-h-[44px];
   }
   .btn-secondary {
     @apply border border-gray-200 bg-white text-gray-700 px-4 py-2 rounded-lg
@@ -31,7 +31,7 @@
   .input {
     @apply w-full border border-gray-200 rounded-lg px-3 py-2 text-sm
            focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary
-           placeholder:text-gray-400 bg-white;
+           placeholder:text-gray-400 bg-white min-h-[44px];
   }
   .input-error { @apply border-red-300 focus:ring-red-200 focus:border-red-400; }
   .label { @apply block text-sm font-medium text-gray-600 mb-1; }
