@@ -34,7 +34,13 @@ export async function POST(req: NextRequest) {
     matchedLarps = result.matchedLarps
     allLarps = result.allLarps
   } catch (err: any) {
-    console.error('Chat engine error:', err)
+    console.error('[API /chat] Chat engine error:', err)
+    console.error('[API /chat] Error details:', {
+      message: err?.message,
+      stack: err?.stack?.split('\n').slice(0, 3).join('\n'),
+      status: err?.status,
+      code: err?.code,
+    })
     const isEN = locale === 'en'
     return NextResponse.json({
       error: 'Error al contactar el servicio de IA',
