@@ -3,6 +3,20 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import sql from '@/lib/db'
 
+function stripMarkdown(text: string): string {
+  return text
+    .replace(/^#{1,6}\s+/gm, '')
+    .replace(/\*\*(.+?)\*\*/g, '$1')
+    .replace(/\*(.+?)\*/g, '$1')
+    .replace(/`(.+?)`/g, '$1')
+    .replace(/^[-*+]\s+/gm, '')
+    .replace(/^\d+\.\s+/gm, '')
+    .replace(/^\|.*\|$/gm, '')
+    .replace(/^[-|:\s]+$/gm, '')
+    .replace(/\n+/g, ' ')
+    .trim()
+}
+
 export async function GET() {
   const session = await getServerSession(authOptions)
   if (!session) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
@@ -36,7 +50,7 @@ export async function GET() {
     historial: sesionesOrdenadas.map((s: any) => ({
       sessionId: s.session_id,
       titulo: s.session_title || 'Conversación',
-      preview: (s.respuesta_bot ?? '').slice(0, 80),
+      preview: stripMarkdown(s.respuesta_bot ?? '').slice(0, 80),
       actualizado: s.actualizado_en,
       mensajeCount: s.mensaje_count,
     })),
