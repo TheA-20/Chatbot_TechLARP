@@ -4,6 +4,7 @@ import { signOut } from 'next-auth/react'
 import { useI18n } from '@/lib/i18n/context'
 import Image from 'next/image'
 import { LanguageSwitcher } from '@/app/components/LanguageSwitcher'
+import { bp } from '@/lib/base-path'
 
 interface DashboardClientProps {
   userName: string
@@ -47,7 +48,7 @@ export default function DashboardClient({ userName, rol, stats, misLarps, notifs
               <Link href="/admin/revision" className="hidden sm:inline-flex btn-secondary text-xs">{t.adminPanel}</Link>
             )}
             <Link href="/chat" className="btn-primary text-xs">{t.chatbot}</Link>
-            <button onClick={() => signOut({ callbackUrl: '/login' })} className="text-xs text-gray-400 hover:text-gray-600">{t.logout}</button>
+            <button onClick={() => signOut({ callbackUrl: `${bp}/login` })} className="text-xs text-gray-400 hover:text-gray-600">{t.logout}</button>
           </div>
         </div>
       </header>
