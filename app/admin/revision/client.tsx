@@ -79,7 +79,7 @@ export default function AdminRevisionClient({ pendientes, docentes, stats }: any
             <span className="text-sm font-medium">Panel de administración</span>
           </div>
           <div className="flex justify-center pointer-events-none">
-            <Image src={`${process.env.NEXT_PUBLIC_BASE_PATH || ''}/TechLARP-logo-02.png`} alt="TechLARP" width={900} height={225} className="h-48 w-auto -my-[4.5rem]" priority />
+            <Image src={`${process.env.NEXT_PUBLIC_BASE_PATH || ''}/TechLARP-logo-02.png`} alt="TechLARP" width={900} height={225} className="h-7 w-auto sm:h-48 sm:-my-[4.5rem]" priority />
           </div>
           <div className="flex justify-end">
             <span className="text-xs text-gray-400 bg-gray-100 px-3 py-1 rounded-full">Admin</span>
