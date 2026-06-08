@@ -326,7 +326,8 @@ REGLAS:
       })
   )
   const larpsEnRespuesta = allLarps.filter((l: any) => nombresEnRespuesta.has(l.nombre.toLowerCase()))
-  const larpsParaDescargaFinal: any[] = larpsEnRespuesta
+  // Limitar a máximo 10 actividades para evitar sobrecarga del payload en contextLarps
+  const larpsParaDescargaFinal: any[] = larpsEnRespuesta.slice(0, 10)
 
   // Guardia anti-alucinación (log)
   const nombresAutorizados = allLarps.map((l: any) => l.nombre.toLowerCase())
