@@ -49,7 +49,9 @@ async function ollamaChat(
 }
 
 function isRateLimit(err: any): boolean {
-  return err?.status === 429 || err?.error?.code === 'rate_limit_exceeded'
+  return err?.status === 429 || 
+         err?.error?.code === 'rate_limit_exceeded' ||
+         err?.error?.error?.code === 'rate_limit_exceeded'
 }
 
 export interface ChatEngineInput {
@@ -81,9 +83,9 @@ export async function runChatEngine(input: ChatEngineInput): Promise<ChatEngineR
   `
 
   const resumenRepositorio = allLarps.length > 0
-    ? allLarps.map((l: any, i: number) =>
-        `${i + 1}. "${l.nombre}" — ${l.asignaturas} | ${l.nivel_educativo} | ${l.duracion_min} min | hasta ${l.num_participantes} estudiantes`
-      ).join('\n')
+    ? allLarps.slice(0, 15).map((l: any, i: number) =>
+        `${i + 1}. "${l.nombre}" — ${l.asignaturas} | ${l.nivel_educativo}`
+      ).join('\n') + (allLarps.length > 15 ? `\n... y ${allLarps.length - 15} actividades más.` : '')
     : 'No hay actividades publicadas aún.'
 
   const SIMILARITY_MIN_THRESHOLD = 0.55   // mínimo para incluir resultado en contexto RAG
@@ -134,9 +136,9 @@ export async function runChatEngine(input: ChatEngineInput): Promise<ChatEngineR
     }
   }
 
-  const matchedLarps = await buscarPorSimilitud(mensaje, 3)
+  const matchedLarps = await buscarPorSimilitud(mensaje, 2)
 
-  // 3. Construir contexto detallado con las actividades recuperadas
+  // 3. Construir contexto detallado con las actividades recuperadas (reducido para evitar superar límite de tokens)
   const highSimilarityMatches = matchedLarps.filter((l: any) => Number(l.similitud) > SIMILARITY_HIGH_THRESHOLD)
   const larpsParaDescarga: any[] = highSimilarityMatches.length > 0
     ? highSimilarityMatches
@@ -146,15 +148,16 @@ export async function runChatEngine(input: ChatEngineInput): Promise<ChatEngineR
     ? (isEN
         ? '\n\nACTIVITIES RETRIEVED BY SEMANTIC SIMILARITY (use as the basis for your answer — do not invent data beyond what appears here):\n'
         : '\n\nACTIVIDADES RECUPERADAS POR SIMILITUD SEMÁNTICA (usa como base de respuesta — no inventes datos más allá de lo que aparece aquí):\n') +
-      matchedLarps.map((l: any, i: number) =>
-        `[${i + 1}] "${l.nombre}" (relevancia: ${(Number(l.similitud) * 100).toFixed(0)}%)\n` +
-        `    ${isEN ? 'Level' : 'Nivel'}: ${l.nivel_educativo} | ${isEN ? 'Areas' : 'Áreas'}: ${l.asignaturas} | ${l.duracion_min} min | ${l.num_participantes} ${isEN ? 'participants' : 'participantes'}\n` +
-        `    ${isEN ? 'Description' : 'Descripción'}: ${l.descripcion}`
-      ).join('\n\n')
+      matchedLarps.map((l: any, i: number) => {
+        const descripcionTruncada = l.descripcion.length > 200 ? l.descripcion.slice(0, 200) + '...' : l.descripcion
+        return `[${i + 1}] "${l.nombre}" (relevancia: ${(Number(l.similitud) * 100).toFixed(0)}%)\n` +
+          `    ${isEN ? 'Level' : 'Nivel'}: ${l.nivel_educativo} | ${isEN ? 'Areas' : 'Áreas'}: ${l.asignaturas} | ${l.duracion_min} min | ${l.num_participantes} ${isEN ? 'participants' : 'participantes'}\n` +
+          `    ${isEN ? 'Description' : 'Descripción'}: ${descripcionTruncada}`
+      }).join('\n\n')
     : ''
 
-  // 4. Limitar historial a los últimos 10 turnos
-  const historialLimitado = (historial as any[]).slice(-10)
+  // 4. Limitar historial a los últimos 6 turnos para reducir tamaño del prompt
+  const historialLimitado = (historial as any[]).slice(-6)
 
   // 5. Refuerzo de lenguaje
   const refuerzoInclusivo = !isEN
