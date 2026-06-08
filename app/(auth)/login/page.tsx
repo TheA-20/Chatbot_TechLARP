@@ -65,9 +65,9 @@ function LoginForm() {
               {loading ? t.loginLoading : t.loginButton}
             </button>
           </form>
-          <p className="text-center text-xs text-gray-400 mt-4">
+          <p className="text-center text-sm text-gray-500 mt-4">
             {t.noAccount}{' '}
-            <a href="/registro" className="text-primary hover:underline">{t.requestAccess}</a>
+            <a href="/registro" className="text-violet-700 hover:underline">{t.requestAccess}</a>
           </p>
         </div>
       </div>
