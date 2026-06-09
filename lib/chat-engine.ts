@@ -281,6 +281,9 @@ REGLAS:
 - VISTA PREVIA INTERACTIVA: Esta interfaz tiene un panel lateral que muestra todos los detalles de una actividad (misiones, roles, cartas, paralelos, objetivos). Cuando recomiendes una actividad concreta, termina SIEMPRE con: "¿Quieres saber más sobre esta actividad o prefieres que mencione otras opciones?" SÓLO cuando el usuario confirme explícitamente que quiere esa actividad (responda "sí", "esa", "me gusta", "quiero verla", "muestramela", "esa misma", "perfecto", "adelante", "saber más" o similar confirmación), incluye la cadena exacta <<VISTA_PREVIA>> al inicio de tu respuesta. Si el usuario pide otras opciones o quiere cambiar, NO incluyas <<VISTA_PREVIA>>.${contextoDetallado}`
 
   // 7. Llamada al LLM con triple fallback: Groq 70B → Groq 8B → Ollama local
+  // Use more tokens when RAG context is active (tables, detailed descriptions); less for simple chat.
+  const maxTokensOutput = matchedLarps.length > 0 ? 700 : 450
+
   let textoRespuesta = ''
   const chatMessages = [
     { role: 'system' as const, content: systemPrompt },
@@ -291,7 +294,7 @@ REGLAS:
 
   try {
     const r = await groq.chat.completions.create({
-      model: 'llama-3.3-70b-versatile', max_tokens: 900, temperature: 0.3, messages: chatMessages,
+      model: 'llama-3.3-70b-versatile', max_tokens: maxTokensOutput, temperature: 0.3, messages: chatMessages,
     })
     textoRespuesta = r.choices[0]?.message?.content ?? ''
   } catch (err: any) {
@@ -299,13 +302,19 @@ REGLAS:
     console.warn('[ChatEngine] llama-3.3-70b-versatile rate-limited → trying llama-3.1-8b-instant')
     try {
       const r = await groq.chat.completions.create({
-        model: 'llama-3.1-8b-instant', max_tokens: 600, temperature: 0.3, messages: chatMessages,
+        model: 'llama-3.1-8b-instant', max_tokens: maxTokensOutput, temperature: 0.3, messages: chatMessages,
       })
       textoRespuesta = r.choices[0]?.message?.content ?? ''
     } catch (err2: any) {
       if (!isRateLimit(err2)) throw err2
       console.warn('[ChatEngine] All Groq models rate-limited → falling back to local Ollama')
-      textoRespuesta = await ollamaChat(chatMessages, 600, 0.3)
+      try {
+        textoRespuesta = await ollamaChat(chatMessages, maxTokensOutput, 0.3)
+      } catch {
+        const e = new Error('RATE_LIMIT_EXHAUSTED') as any
+        e.isRateLimit = true
+        throw e
+      }
     }
   }
 

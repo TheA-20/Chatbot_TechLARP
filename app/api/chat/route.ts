@@ -42,6 +42,14 @@ export async function POST(req: NextRequest) {
       code: err?.code,
     })
     const isEN = locale === 'en'
+    if (err?.isRateLimit || err?.message === 'RATE_LIMIT_EXHAUSTED') {
+      return NextResponse.json({
+        error: 'Rate limit exceeded',
+        respuesta: isEN
+          ? '⏳ The assistant is receiving too many requests right now. Wait a few seconds and try again.'
+          : '⏳ El asistente está recibiendo demasiadas consultas en este momento. Espera unos segundos e inténtalo de nuevo.',
+      }, { status: 429 })
+    }
     return NextResponse.json({
       error: 'Error al contactar el servicio de IA',
       respuesta: isEN
