@@ -67,6 +67,7 @@ export interface ChatEngineResult {
   openPreview: boolean
   matchedLarps: any[]
   allLarps: any[]
+  ragTopCandidates: any[]
 }
 
 export async function runChatEngine(input: ChatEngineInput): Promise<ChatEngineResult> {
@@ -92,7 +93,8 @@ export async function runChatEngine(input: ChatEngineInput): Promise<ChatEngineR
   const SIMILARITY_HIGH_THRESHOLD = 0.72  // umbral para considerar coincidencia de alta relevancia
 
   // 2. Búsqueda semántica por similitud vectorial (RAG real)
-  async function buscarPorSimilitud(texto: string, topK = 3): Promise<any[]> {
+  // Returns top-5 raw candidates for evaluation + filtered matched larps for context.
+  async function buscarPorSimilitud(texto: string): Promise<{ matched: any[]; candidates: any[] }> {
     try {
       const ollamaUrl = process.env.OLLAMA_URL ?? 'http://localhost:11434'
       const embedRes = await fetch(`${ollamaUrl}/api/embeddings`, {
@@ -104,20 +106,19 @@ export async function runChatEngine(input: ChatEngineInput): Promise<ChatEngineR
 
       if (!embedRes.ok) {
         console.error('[chat-engine] Embedding request failed:', embedRes.status, await embedRes.text().catch(() => ''))
-        return []
+        return { matched: [], candidates: [] }
       }
 
       const { embedding } = await embedRes.json() as { embedding: number[] }
       if (!Array.isArray(embedding) || embedding.length !== 768) {
         console.error('[chat-engine] Embedding inválido: longitud esperada 768, recibida', embedding?.length)
-        return []
+        return { matched: [], candidates: [] }
       }
 
       const vecStr = `[${embedding.join(',')}]`
-      // Use tagged-template column identifiers instead of sql.unsafe() to avoid injection risk
       const col = isEN ? sql`embedding_en` : sql`embedding_es`
 
-      const results = await sql`
+      const candidates = await sql`
         SELECT
           id, nombre, descripcion, asignaturas, nivel_educativo,
           duracion_min, num_participantes,
@@ -126,17 +127,18 @@ export async function runChatEngine(input: ChatEngineInput): Promise<ChatEngineR
         WHERE estado = 'publicado'
           AND ${col} IS NOT NULL
         ORDER BY ${col} <=> ${vecStr}::vector
-        LIMIT ${topK}
+        LIMIT 5
       `
 
-      return results.filter((r: any) => Number(r.similitud) > SIMILARITY_MIN_THRESHOLD)
+      const matched = candidates.filter((r: any) => Number(r.similitud) > SIMILARITY_MIN_THRESHOLD)
+      return { matched, candidates }
     } catch (err) {
       console.error('[chat-engine] Error en búsqueda por similitud:', err)
-      return []
+      return { matched: [], candidates: [] }
     }
   }
 
-  const matchedLarps = await buscarPorSimilitud(mensaje, 2)
+  const { matched: matchedLarps, candidates: ragTopCandidates } = await buscarPorSimilitud(mensaje)
 
   // 3. Construir contexto detallado con las actividades recuperadas (reducido para evitar superar límite de tokens)
   const highSimilarityMatches = matchedLarps.filter((l: any) => Number(l.similitud) > SIMILARITY_HIGH_THRESHOLD)
@@ -176,6 +178,7 @@ TONE & FORMAT:
 - When greetings or small talk arrive, respond briefly and ask ONE focused question to understand how you can help.
 - TABLES & SYMBOLS: When creating tables or lists that use symbols to indicate levels/states, ALWAYS use standard emoji or clear text instead of special Unicode characters. For coverage/completion indicators use: ✅ (complete/yes), 🔵 (partial), ❌ (no/none). Never use: ✓, ◐, ✗, or similar Unicode symbols that may not render correctly.
 - COMPARISON TABLES: Maximum 4 activities per table. If the user asks for more, select the 4 most relevant to their context, generate the table, and always append this exact note on a new line: "⚠️ For data security reasons, comparison tables are limited to 4 activities at a time. Ask me to compare others if you'd like to see more options."
+- ACTIVITY LIMIT PER RESPONSE: Show a maximum of 3 activities per response. If the user asks for more options, show up to 2 additional activities in the next response. Never list more than 3 activities in a single message.
 
 AVAILABLE ACTIVITY REPOSITORY:
 ${resumenRepositorio}
@@ -221,6 +224,7 @@ TONO Y FORMATO:
 - Ante saludos o mensajes cortos, responde brevemente y formula UNA pregunta para entender cómo ayudar.
 - TABLAS Y SÍMBOLOS: Al crear tablas o listas que usen símbolos para indicar niveles/estados, USA SIEMPRE emoji estándar o texto claro en lugar de caracteres Unicode especiales. Para indicadores de cobertura/cumplimiento usa: ✅ (completo/sí), 🔵 (parcial), ❌ (no/ninguno). NUNCA uses: ✓, ◐, ✗, ni símbolos Unicode similares que puedan no renderizarse correctamente.
 - TABLAS COMPARATIVAS: Máximo 4 actividades por tabla. Si el usuario pide más, selecciona las 4 más relevantes para su contexto, genera la tabla y añade siempre esta nota exacta en una línea nueva al final: "⚠️ Por razones de seguridad de la información, las tablas comparativas están limitadas a 4 actividades por consulta. Pídeme que compare otras si quieres ver más opciones."
+- LÍMITE DE ACTIVIDADES POR RESPUESTA: Muestra un máximo de 3 actividades por respuesta. Si el usuario pide más opciones, muestra hasta 2 actividades adicionales en la siguiente respuesta. Nunca listes más de 3 actividades en un solo mensaje.
 
 PÚBLICO OBJETIVO — FUNDAMENTAL:
 Las actividades TechLARP están diseñadas ESPECÍFICAMENTE y de forma intencional para estudiantes de género femenino. Esto NO es una limitación ni algo adaptable: es el propósito central del proyecto.
@@ -340,8 +344,8 @@ REGLAS:
       })
   )
   const larpsEnRespuesta = allLarps.filter((l: any) => nombresEnRespuesta.has(l.nombre.toLowerCase()))
-  // Limitar a máximo 10 actividades para evitar sobrecarga del payload en contextLarps
-  const larpsParaDescargaFinal: any[] = larpsEnRespuesta.slice(0, 10)
+  // Show max 3 activities per response; remaining candidates available on follow-up.
+  const larpsParaDescargaFinal: any[] = larpsEnRespuesta.slice(0, 3)
 
   // Guardia anti-alucinación (log)
   const nombresAutorizados = allLarps.map((l: any) => l.nombre.toLowerCase())
@@ -355,5 +359,5 @@ REGLAS:
     // No mostrar el aviso al docente — solo log interno
   }
 
-  return { textoRespuesta, larpsParaDescargaFinal, openPreview, matchedLarps, allLarps }
+  return { textoRespuesta, larpsParaDescargaFinal, openPreview, matchedLarps, allLarps, ragTopCandidates }
 }

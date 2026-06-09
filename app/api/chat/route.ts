@@ -25,6 +25,7 @@ export async function POST(req: NextRequest) {
   let openPreview = false
   let matchedLarps: any[] = []
   let allLarps: any[] = []
+  let ragTopCandidates: any[] = []
 
   try {
     const result = await runChatEngine({ mensaje, historial, locale, contextLarps })
@@ -33,6 +34,7 @@ export async function POST(req: NextRequest) {
     openPreview = result.openPreview
     matchedLarps = result.matchedLarps
     allLarps = result.allLarps
+    ragTopCandidates = result.ragTopCandidates
   } catch (err: any) {
     console.error('[API /chat] Chat engine error:', err)
     console.error('[API /chat] Error details:', {
@@ -107,6 +109,14 @@ export async function POST(req: NextRequest) {
     larps: larpsParaDescargaFinal.map((l: any) => ({ id: l.id, nombre: l.nombre, similitud: Number(l.similitud ?? 0) })),
     rag_activo: matchedLarps.length > 0,
     openPreview,
+    rag_matched: matchedLarps.map((l: any) => ({
+      id: l.id, nombre: l.nombre, similitud: Number(l.similitud ?? 0),
+    })),
+    rag_top_candidates: ragTopCandidates.slice(0, 5).map((l: any) => ({
+      id: l.id, nombre: l.nombre, similitud: Number(l.similitud ?? 0),
+      supera_umbral: Number(l.similitud ?? 0) > 0.55,
+      supera_umbral_alto: Number(l.similitud ?? 0) > 0.72,
+    })),
   })
 }
 
