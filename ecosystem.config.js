@@ -26,7 +26,13 @@ module.exports = {
       NODE_ENV:     'production',
       PORT:         '3000',
       HOSTNAME:     '0.0.0.0',
-      DATABASE_URL: readEnvKey(envFile, 'DATABASE_URL'),
+      DATABASE_URL:           readEnvKey(envFile, 'DATABASE_URL'),
+      // Server Components read process.env at runtime (not from webpack DefinePlugin).
+      // Without this the standalone server has no NEXT_PUBLIC_BASE_PATH → layout.tsx
+      // renders wrong paths for the DEI logo and the favicon link.
+      NEXT_PUBLIC_BASE_PATH:  readEnvKey(envFile, 'USE_SUBPATH') === 'true'
+        ? '/techlarp-chatbot'
+        : '',
     },
     max_memory_restart: '512M',
     error_file:    './logs/err.log',
