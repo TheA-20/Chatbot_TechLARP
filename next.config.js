@@ -1,4 +1,10 @@
 /** @type {import('next').NextConfig} */
+// Pre-load .env files so safety checks below can read them.
+// next.config.js is evaluated before Next.js normally runs loadEnvConfig,
+// so we call it explicitly here.
+const { loadEnvConfig } = require('@next/env')
+loadEnvConfig(process.cwd(), process.env.NODE_ENV !== 'production', { info: () => {}, error: () => {} })
+
 const isProd = process.env.NODE_ENV === 'production'
 
 // Startup safety checks — fail fast rather than silently misbehave in production
@@ -43,9 +49,6 @@ const securityHeaders = [
 const nextConfig = {
   basePath: subpathValue,
   assetPrefix: subpathValue,
-  env: {
-    NEXT_PUBLIC_BASE_PATH: subpathValue,
-  },
   async headers() {
     return [
       {

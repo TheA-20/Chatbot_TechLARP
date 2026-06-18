@@ -114,7 +114,8 @@ export async function POST(req: NextRequest) {
     })),
     rag_top_candidates: ragTopCandidates.slice(0, 5).map((l: any) => ({
       id: l.id, nombre: l.nombre, similitud: Number(l.similitud ?? 0),
-      supera_umbral: Number(l.similitud ?? 0) > 0.55,
+      similitud_base: Number(l.similitud_base ?? l.similitud ?? 0),
+      supera_umbral: Number(l.similitud ?? 0) > 0.65,
       supera_umbral_alto: Number(l.similitud ?? 0) > 0.72,
     })),
   })

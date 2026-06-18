@@ -4,6 +4,7 @@ import { signIn } from 'next-auth/react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { useI18n } from '@/lib/i18n/context'
 import Image from 'next/image'
+import Link from 'next/link'
 import { LanguageSwitcher } from '@/app/components/LanguageSwitcher'
 
 function LoginForm() {
@@ -67,7 +68,7 @@ function LoginForm() {
           </form>
           <p className="text-center text-sm text-gray-500 mt-4">
             {t.noAccount}{' '}
-            <a href="/registro" className="text-violet-700 hover:underline">{t.requestAccess}</a>
+            <Link href="/registro" className="text-violet-700 hover:underline">{t.requestAccess}</Link>
           </p>
         </div>
       </div>

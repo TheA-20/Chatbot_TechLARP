@@ -427,7 +427,7 @@ export default function FormularioPage() {
             </div>
             <div className="flex items-center gap-2 flex-shrink-0">
               <a
-                href="/techlarp-template.json"
+                href={`${bp}/techlarp-template.json`}
                 download="techlarp-template.json"
                 className="btn-secondary text-xs flex items-center gap-1"
               >
@@ -1138,7 +1138,7 @@ export default function FormularioPage() {
                   ))}
                   <div className="pt-3 border-t border-gray-100">
                     <a
-                      href="/techlarp-template.json"
+                      href={`${bp}/techlarp-template.json`}
                       download="techlarp-template.json"
                       className="btn-primary text-xs inline-flex items-center gap-1.5"
                     >

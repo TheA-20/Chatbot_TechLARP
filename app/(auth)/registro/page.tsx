@@ -3,6 +3,7 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useI18n } from '@/lib/i18n/context'
 import Image from 'next/image'
+import Link from 'next/link'
 import { LanguageSwitcher } from '@/app/components/LanguageSwitcher'
 import { bp } from '@/lib/base-path'
 
@@ -48,7 +49,7 @@ export default function RegistroPage() {
         </div>
         <h2 className="text-base font-medium mb-2">{t.requestSent}</h2>
         <p className="text-sm text-gray-500 mb-4">{t.requestSentDesc}</p>
-        <a href="/login" className="btn-primary inline-block">{t.backToLogin}</a>
+        <Link href="/login" className="btn-primary inline-block">{t.backToLogin}</Link>
       </div>
     </div>
   )
@@ -93,7 +94,7 @@ export default function RegistroPage() {
           </form>
           <p className="text-center text-xs text-gray-400 mt-4">
             {t.hasAccount}{' '}
-            <a href="/login" className="text-primary hover:underline">{t.goToLogin}</a>
+            <Link href="/login" className="text-primary hover:underline">{t.goToLogin}</Link>
           </p>
         </div>
       </div>
