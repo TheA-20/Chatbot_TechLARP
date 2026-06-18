@@ -1,28 +1,42 @@
 /** @type {import('next').NextConfig} */
-// Pre-load .env files so safety checks below can read them.
-// next.config.js is evaluated before Next.js normally runs loadEnvConfig,
-// so we call it explicitly here.
-const { loadEnvConfig } = require('@next/env')
-loadEnvConfig(process.cwd(), process.env.NODE_ENV !== 'production', { info: () => {}, error: () => {} })
+const fs   = require('fs')
+const path = require('path')
+
+// Read a single key from .env files WITHOUT using @next/env's loadEnvConfig.
+// Calling loadEnvConfig here would mark the .env files as already-loaded,
+// preventing Next.js's own internal loadEnvConfig call from reporting the
+// NEXT_PUBLIC_* vars it needs to populate webpack's DefinePlugin — which is
+// what actually injects them into the client bundle.
+function readEnvVar(key) {
+  if (process.env[key] !== undefined) return process.env[key]
+  for (const f of ['.env.local', '.env.production', '.env']) {
+    try {
+      const line = fs.readFileSync(path.join(__dirname, f), 'utf8')
+        .split('\n').find(l => l.startsWith(key + '='))
+      if (line) return line.slice(key.length + 1).replace(/^["']|["']$/g, '').trim()
+    } catch {}
+  }
+  return undefined
+}
 
 const isProd = process.env.NODE_ENV === 'production'
 
 // Startup safety checks — fail fast rather than silently misbehave in production
 if (isProd) {
-  if (!process.env.ALLOWED_ORIGINS) {
+  if (!readEnvVar('ALLOWED_ORIGINS')) {
     throw new Error(
       '[next.config] ALLOWED_ORIGINS is not set. Server Actions will reject all production ' +
       'requests with 403. Set ALLOWED_ORIGINS=your-domain.com in .env.production.'
     )
   }
-  if (!process.env.NEXTAUTH_SECURE || process.env.NEXTAUTH_SECURE !== 'true') {
+  if (readEnvVar('NEXTAUTH_SECURE') !== 'true') {
     throw new Error(
       '[next.config] NEXTAUTH_SECURE is not set to "true". Session/CSRF/callback cookies will ' +
       'be issued without the Secure flag. Set NEXTAUTH_SECURE=true in .env.production.'
     )
   }
 }
-const useSubpath = process.env.USE_SUBPATH === 'true'
+const useSubpath = readEnvVar('USE_SUBPATH') === 'true'
 const subpathValue = (isProd && useSubpath) ? '/techlarp-chatbot' : ''
 
 // Security headers applied to every response
@@ -49,6 +63,13 @@ const securityHeaders = [
 const nextConfig = {
   basePath: subpathValue,
   assetPrefix: subpathValue,
+  // Injects NEXT_PUBLIC_BASE_PATH into webpack's DefinePlugin so the client
+  // bundle has the correct value. process.env alone is not enough — Next.js
+  // only injects NEXT_PUBLIC_* vars into the browser bundle if they appear in
+  // nextConfig.env or were loaded by its own internal @next/env call.
+  env: {
+    NEXT_PUBLIC_BASE_PATH: subpathValue,
+  },
   async headers() {
     return [
       {
@@ -61,7 +82,7 @@ const nextConfig = {
     serverActions: {
       allowedOrigins: [
         'localhost:3000',
-        ...(process.env.ALLOWED_ORIGINS ? process.env.ALLOWED_ORIGINS.split(',') : []),
+        ...(readEnvVar('ALLOWED_ORIGINS') ? readEnvVar('ALLOWED_ORIGINS').split(',') : []),
       ],
     },
   },
