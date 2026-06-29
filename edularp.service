@@ -1,0 +1,40 @@
+[Unit]
+Description=EduLARP / TechLARP — Next.js App
+Documentation=https://github.com/tu-org/edularp
+After=network.target postgresql.service
+Wants=postgresql.service
+
+[Service]
+Type=simple
+User=edularp
+Group=edularp
+WorkingDirectory=/opt/edularp
+
+# Carga las variables de entorno desde el fichero .env.local
+EnvironmentFile=/opt/edularp/.env.local
+Environment=NODE_ENV=production
+Environment=PORT=3000
+
+# Arranca la app compilada (requiere haber ejecutado deploy.sh antes)
+# deploy.sh sobreescribe esta línea con la ruta real de npm al instalar
+ExecStart=/opt/edularp/node_modules/.bin/next start -p 3000
+
+# Reinicio automático siempre que el proceso muera (crash, OOM, señal, etc.)
+Restart=always
+RestartSec=5
+# Sin límite de reintentos: el servicio siempre vuelve a arrancar
+StartLimitIntervalSec=0
+
+# Limites de seguridad
+NoNewPrivileges=true
+ProtectSystem=strict
+ReadWritePaths=/opt/edularp /opt/edularp/public/uploads /opt/edularp/.next/cache
+PrivateTmp=true
+
+# Logs → journald (ver con: journalctl -u edularp -f)
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=edularp
+
+[Install]
+WantedBy=multi-user.target
