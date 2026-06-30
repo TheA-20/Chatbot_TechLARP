@@ -86,6 +86,10 @@ const nextConfig = {
     // Only allow images served from the application's own origin.
     remotePatterns: [],
   },
+  webpack(config) {
+    config.resolve.alias['@'] = path.resolve(__dirname)
+    return config
+  },
   ...(isProd && {
     output: 'standalone',
   }),
