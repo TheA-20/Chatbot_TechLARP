@@ -85,6 +85,12 @@ if [[ "$UPDATE_ONLY" == false ]]; then
   fi
 fi
 
+# ── Dependencias del sistema ──────────────────────────────────────────────────
+if ! command -v rsync &>/dev/null; then
+  apt-get install -y rsync &>/dev/null
+  ok "rsync instalado"
+fi
+
 # ── Parar servicio si estaba corriendo ───────────────────────────────────────
 echo ""
 echo "━━━ BUILD ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
