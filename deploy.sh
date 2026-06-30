@@ -42,7 +42,7 @@ if [[ "$UPDATE_ONLY" == false ]]; then
 
   # Crear usuario del sistema
   if ! id "$APP_USER" &>/dev/null; then
-    useradd --system --shell /bin/false --home "$APP_DIR" --create-home "$APP_USER"
+    /usr/sbin/useradd --system --shell /bin/false --home "$APP_DIR" --create-home "$APP_USER"
     ok "Usuario del sistema '$APP_USER' creado"
   else
     warn "Usuario '$APP_USER' ya existe"
