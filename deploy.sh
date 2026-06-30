@@ -88,6 +88,16 @@ if ! command -v rsync &>/dev/null; then
   ok "rsync instalado"
 fi
 
+# ── Actualizar fichero de servicio systemd (siempre) ─────────────────────────
+SERVICE_FILE="$(dirname "$(realpath "$0")")/edularp.service"
+if [[ -f "$SERVICE_FILE" ]]; then
+  cp "$SERVICE_FILE" "/etc/systemd/system/${SERVICE}.service"
+  sed -i "s|/opt/edularp|$APP_DIR|g" "/etc/systemd/system/${SERVICE}.service"
+  sed -i "/^StartLimitBurst=/d" "/etc/systemd/system/${SERVICE}.service"
+  systemctl daemon-reload
+  ok "Fichero de servicio systemd actualizado"
+fi
+
 # ── Parar servicio si estaba corriendo ───────────────────────────────────────
 echo ""
 echo "━━━ BUILD ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
