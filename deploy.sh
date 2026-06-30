@@ -116,17 +116,17 @@ ok "Código sincronizado"
 # ── Instalar dependencias y compilar ─────────────────────────────────────────
 echo "Instalando dependencias..."
 cd "$APP_DIR"
-sudo -u "$APP_USER" npm ci --omit=dev 2>&1 | tail -3
+su -s /bin/bash "$APP_USER" -c "npm ci --omit=dev" 2>&1 | tail -3
 
 echo "Compilando Next.js (puede tardar 1-3 min)..."
-sudo -u "$APP_USER" npm run build 2>&1 | tail -10
+su -s /bin/bash "$APP_USER" -c "npm run build" 2>&1 | tail -10
 ok "Build completado"
 
 # ── Inicializar / migrar base de datos ───────────────────────────────────────
 echo ""
 echo "━━━ BASE DE DATOS ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-if sudo -u "$APP_USER" npm run db:migrate -- --dry-run &>/dev/null 2>&1; then
-  sudo -u "$APP_USER" npm run db:migrate
+if su -s /bin/bash "$APP_USER" -c "npm run db:migrate -- --dry-run" &>/dev/null 2>&1; then
+  su -s /bin/bash "$APP_USER" -c "npm run db:migrate"
   ok "Migraciones aplicadas"
 else
   warn "Ejecuta manualmente: cd $APP_DIR && npm run db:init"
