@@ -73,9 +73,6 @@ if [[ "$UPDATE_ONLY" == false ]]; then
     # Ajustar WorkingDirectory y ExecStart con la ruta real
     sed -i "s|/opt/edularp|$APP_DIR|g" "/etc/systemd/system/${SERVICE}.service"
     # Usar npm del sistema como arranque (más portable)
-    NPM_BIN=$(which npm)
-    sed -i "s|ExecStart=.*|ExecStart=$NPM_BIN run start -- -p $PORT|" \
-      "/etc/systemd/system/${SERVICE}.service"
     # Garantizar reinicio ilimitado (eliminar StartLimitBurst si quedó de versiones anteriores)
     sed -i "/^StartLimitBurst=/d" "/etc/systemd/system/${SERVICE}.service"
     systemctl daemon-reload
@@ -121,6 +118,12 @@ su -s /bin/bash "$APP_USER" -c "npm ci --omit=dev" 2>&1 | tail -3
 echo "Compilando Next.js (puede tardar 1-3 min)..."
 su -s /bin/bash "$APP_USER" -c "npm run build" 2>&1 | tail -10
 ok "Build completado"
+
+# Standalone: copiar assets estáticos al directorio standalone
+cp -r "$APP_DIR/public" "$APP_DIR/.next/standalone/public"
+cp -r "$APP_DIR/.next/static" "$APP_DIR/.next/standalone/.next/static"
+chown -R "$APP_USER:$APP_USER" "$APP_DIR/.next/standalone"
+ok "Assets standalone copiados"
 
 # ── Inicializar / migrar base de datos ───────────────────────────────────────
 echo ""
