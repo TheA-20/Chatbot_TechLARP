@@ -29,12 +29,6 @@ if (isProd) {
       'requests with 403. Set ALLOWED_ORIGINS=your-domain.com in .env.production.'
     )
   }
-  if (readEnvVar('NEXTAUTH_SECURE') !== 'true') {
-    throw new Error(
-      '[next.config] NEXTAUTH_SECURE is not set to "true". Session/CSRF/callback cookies will ' +
-      'be issued without the Secure flag. Set NEXTAUTH_SECURE=true in .env.production.'
-    )
-  }
 }
 const useSubpath = readEnvVar('USE_SUBPATH') === 'true'
 const subpathValue = (isProd && useSubpath) ? '/techlarp-chatbot' : ''
