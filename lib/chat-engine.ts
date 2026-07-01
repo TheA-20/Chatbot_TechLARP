@@ -24,6 +24,13 @@ function validateOllamaUrl(raw: string): string {
 const OLLAMA_BASE_URL = validateOllamaUrl(process.env.OLLAMA_URL ?? 'http://localhost:11434')
 
 // ---------------------------------------------------------------------------
+// Caché en memoria para allLarps — evita un SELECT completo por cada mensaje
+// ---------------------------------------------------------------------------
+let _cachedAllLarps: any[] | null = null
+let _cacheExpiry = 0
+const CACHE_TTL_MS = 5 * 60 * 1000 // 5 minutos
+
+// ---------------------------------------------------------------------------
 // Ollama fallback — OpenAI-compatible endpoint, no rate limit, runs locally
 // ---------------------------------------------------------------------------
 async function ollamaChat(
@@ -104,19 +111,23 @@ export async function runChatEngine(input: ChatEngineInput): Promise<ChatEngineR
   const { mensaje, historial = [], locale = 'es', contextLarps = [] } = input
   const isEN = locale === 'en'
 
-  // 1. Cargar resumen de TODAS las actividades TechLARP publicadas
-  const allLarps = await sql`
-    SELECT e.id, e.nombre, e.descripcion, e.nivel_educativo,
-           e.asignaturas, e.duracion_min, e.num_participantes
-    FROM edularp e
-    WHERE e.estado = 'publicado'
-    ORDER BY e.nombre
-  `
+  // 1. Cargar resumen de TODAS las actividades TechLARP publicadas (con caché 5 min)
+  if (!_cachedAllLarps || Date.now() > _cacheExpiry) {
+    _cachedAllLarps = await sql`
+      SELECT e.id, e.nombre, e.descripcion, e.nivel_educativo,
+             e.asignaturas, e.duracion_min, e.num_participantes
+      FROM edularp e
+      WHERE e.estado = 'publicado'
+      ORDER BY e.nombre
+    `
+    _cacheExpiry = Date.now() + CACHE_TTL_MS
+  }
+  const allLarps = _cachedAllLarps!
 
   const resumenRepositorio = allLarps.length > 0
-    ? allLarps.slice(0, 15).map((l: any, i: number) =>
+    ? allLarps.map((l: any, i: number) =>
         `${i + 1}. "${l.nombre}" — ${l.asignaturas} | ${l.nivel_educativo}`
-      ).join('\n') + (allLarps.length > 15 ? `\n... y ${allLarps.length - 15} actividades más.` : '')
+      ).join('\n')
     : 'No hay actividades publicadas aún.'
 
   const SIMILARITY_MIN_THRESHOLD = 0.65   // mínimo para incluir resultado en contexto RAG (antes 0.55)
@@ -173,7 +184,7 @@ export async function runChatEngine(input: ChatEngineInput): Promise<ChatEngineR
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ model: 'nomic-embed-text', prompt: texto }),
-        signal: AbortSignal.timeout(5000),
+        signal: AbortSignal.timeout(10_000),
       })
 
       if (!embedRes.ok) {

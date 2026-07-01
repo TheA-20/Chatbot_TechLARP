@@ -3,7 +3,7 @@ import { runChatEngine } from '@/lib/chat-engine'
 
 // Rate-limit simple por IP para el modo invitado (sin sesion persistida)
 const guestRequests = new Map<string, { count: number; resetAt: number }>()
-const GUEST_LIMIT = 30        // max requests por ventana
+const GUEST_LIMIT = 300       // max requests por ventana
 const GUEST_WINDOW_MS = 60_000 // 1 minuto
 
 function checkGuestRateLimit(ip: string): boolean {
