@@ -1,9 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
-import Groq from 'groq-sdk'
 import sql from '@/lib/db'
 import { timingSafeEqual } from 'crypto'
-
-const groq = new Groq({ apiKey: process.env.GROQ_API_KEY! })
+import { callLLMJson, PRIMARY_LLM } from '@/lib/llm-provider'
 
 const SYSTEM_PROMPT = `Eres un evaluador experto del Gender Inclusion Index (GII) v1.0 para actividades TechLARP.
 Tu tarea es evaluar 22 criterios de inclusión de género en el diseño de una actividad educativa de LARP (juego de rol en vivo).
@@ -131,21 +129,16 @@ Evalúa los 22 criterios complementarios siguiendo las instrucciones del sistema
 
   let llmProposal: Record<string, unknown>
   try {
-    const completion = await groq.chat.completions.create({
-      model: 'llama-3.3-70b-versatile',
+    llmProposal = await callLLMJson({
+      system:      SYSTEM_PROMPT,
+      messages:    [{ role: 'user', content: userMessage }],
+      maxTokens:   4000,
       temperature: 0.2,
-      max_tokens: 4000,
-      messages: [
-        { role: 'system', content: SYSTEM_PROMPT },
-        { role: 'user',   content: userMessage },
-      ],
-      response_format: { type: 'json_object' },
     })
-
-    const raw = completion.choices[0]?.message?.content ?? '{}'
-    llmProposal = JSON.parse(raw)
     llmProposal.evaluated_at = new Date().toISOString()
-    llmProposal.model = 'llama-3.3-70b-versatile'
+    llmProposal.model        = PRIMARY_LLM === 'claude'
+      ? (process.env.CLAUDE_MODEL ?? 'claude-haiku-4-5-20251001')
+      : 'llama-3.3-70b-versatile'
   } catch (err) {
     console.error('[analyze] LLM call failed:', err)
     return NextResponse.json({ error: 'LLM analysis failed' }, { status: 500 })

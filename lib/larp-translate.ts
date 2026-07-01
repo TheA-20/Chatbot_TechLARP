@@ -1,65 +1,17 @@
-import Groq from 'groq-sdk'
+import { callLLMJson } from '@/lib/llm-provider'
 
-const groq = new Groq({ apiKey: process.env.GROQ_API_KEY! })
-
-function isRateLimit(err: any): boolean {
-  return err?.status === 429 || err?.error?.code === 'rate_limit_exceeded'
-}
-
-async function callOllama(systemPrompt: string, payload: any): Promise<any> {
-  const ollamaUrl = process.env.OLLAMA_URL ?? 'http://localhost:11434'
-  const model     = process.env.OLLAMA_CHAT_MODEL ?? 'llama3.2'
-  const res = await fetch(`${ollamaUrl}/v1/chat/completions`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ollama' },
-    body: JSON.stringify({
-      model,
-      messages: [
-        { role: 'system', content: systemPrompt },
-        { role: 'user',   content: JSON.stringify(payload) },
-      ],
-      temperature: 0.1,
-      max_tokens: 8192,
-      stream: false,
-    }),
-    signal: AbortSignal.timeout(120_000),
-  })
-  if (!res.ok) throw new Error(`Ollama error ${res.status}`)
-  const data = await res.json()
-  const content = data.choices?.[0]?.message?.content ?? '{}'
-  // Strip markdown code fences if present
-  const clean = content.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/, '').trim()
-  return JSON.parse(clean)
-}
-
-async function callGroqFallback(systemPrompt: string, payload: any): Promise<any> {
-  const params = {
-    temperature: 0.1,
-    max_tokens: 8192,
-    response_format: { type: 'json_object' as const },
-    messages: [
-      { role: 'system' as const, content: systemPrompt },
-      { role: 'user' as const, content: JSON.stringify(payload) },
-    ],
-  }
-  let completion
-  try {
-    completion = await groq.chat.completions.create({ model: 'llama-3.3-70b-versatile', ...params })
-  } catch (err: any) {
-    if (!isRateLimit(err)) throw err
-    completion = await groq.chat.completions.create({ model: 'llama-3.1-8b-instant', ...params })
-  }
-  return JSON.parse(completion.choices[0].message.content ?? '{}')
-}
-
-/** Primary: Ollama. Fallback: Groq 70B → Groq 8B */
+/**
+ * Primario según LLM_PROVIDER (env):
+ *   'claude' → Claude → Groq 70B → Groq 8B
+ *   'groq'   → Groq 70B → Groq 8B
+ */
 async function callLLM(systemPrompt: string, payload: any): Promise<any> {
-  try {
-    return await callOllama(systemPrompt, payload)
-  } catch (err) {
-    console.warn('[translateLarpInMemory] Ollama failed, falling back to Groq:', (err as any)?.message)
-    return callGroqFallback(systemPrompt, payload)
-  }
+  return callLLMJson({
+    system:      systemPrompt,
+    messages:    [{ role: 'user', content: JSON.stringify(payload) }],
+    maxTokens:   8192,
+    temperature: 0.1,
+  })
 }
 
 export interface LarpChildren {

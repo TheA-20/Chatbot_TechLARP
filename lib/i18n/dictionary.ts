@@ -90,7 +90,7 @@ const dict = {
     chatError: 'Hubo un error. Inténtalo de nuevo.',
     chatSuggestions: [
       'Busco una actividad sobre el cambio climático para secundaria',
-      '¿Hay actividades TechLARP para trabajar la empatía en bachillerato?',
+      '¿Hay actividades TechLARP para trabajar la empatía en secundaria?',
       'Necesito algo corto, menos de 60 minutos, para ciencias',
       'Quiero una actividad multidisciplinar que combine historia y tecnología',
     ],
@@ -330,6 +330,33 @@ const dict = {
     previewVersionModified: '✏️ Modificada',
     previewVersionModifiedCount: (n: number) => n === 1 ? `modificada ${n} vez` : `modificada ${n} veces`,
     previewTranslationDisclaimer: 'Esta actividad fue creada en otro idioma. La versión que ves es una traducción automática que puede alterar en cierta medida la coherencia inclusiva y narrativa del diseño original.',
+    previewSectionSubjects: 'Asignaturas',
+    previewSectionImages: 'Imágenes',
+    previewSectionNarrative: 'Narrativa',
+    previewSectionParallels: 'Paralelismo Narrativa ↔ Realidad',
+    previewSectionMissions: 'Misiones',
+    previewSectionRoles: 'Roles de Participantes',
+    previewSectionCards: 'Cartas de Juego',
+    previewSectionObjectives: 'Objetivos de Aprendizaje',
+    previewSectionInclusionIndex: 'Índice de Inclusión',
+    previewSectionDesignerEval: 'Evaluación del diseñador/a',
+    previewSectionAIAnalysis: 'Análisis IA',
+    previewSectionAlerts: '⚠ Alertas de inconsistencia',
+    previewSectionAdditional: 'Información Adicional',
+    previewLabelAuthor: 'Autora/Autor',
+    previewBackToActivities: '← Volver a actividades',
+    previewReanalyze: 'Re-analizar',
+    previewReanalyzing: 'Analizando...',
+    previewReanalyzed: '✓ Re-análisis iniciado',
+    previewLabelMaterials2: 'Materiales',
+    previewLabelEvaluation2: 'Evaluación',
+    previewLabelTeacherNotes: 'Notas del Docente',
+    previewLabelType: 'Tipo',
+    previewLabelLore: 'Lore',
+    previewLabelObjective: 'Objetivo',
+    previewLabelSkill: 'Habilidad',
+    previewLabelNarrativeProblem: 'Narrativa',
+    previewLabelRealConnection: 'Pedagógica',
 
     // ── Translate feature ──
     translateToEn: '🌐 Traducir al inglés',
@@ -340,10 +367,30 @@ const dict = {
     translateError: 'Error al traducir. Inténtalo de nuevo.',
 
     // ── Status labels ──
-    statusDraft: 'borrador',
-    statusReview: 'revisión',
-    statusPublished: 'publicado',
-    statusRejected: 'rechazado',
+    statusDraft: 'Borrador',
+    statusReview: 'En revisión',
+    statusPublished: 'Publicada',
+    statusRejected: 'Rechazada',
+    statusAccepted: 'Aceptada',
+    statusModifications: 'Requiere cambios',
+
+    // ── Inclusion Index ──
+    inclusionScore: 'Puntuación de inclusión',
+    inclusionCriteriaMet: 'criterios cumplidos',
+    inclusionDesigner: 'Evaluación diseñadora',
+    inclusionLlm: 'Propuesta IA',
+    inclusionAlerts: 'Alertas',
+
+    // ── Draft auto-save ──
+    saveDraft: 'Guardar borrador',
+    savingDraft: 'Guardando...',
+    draftSaved: 'Borrador guardado',
+    draftSaveError: 'No se pudo guardar',
+
+    // ── Admin actions ──
+    requestModifications: 'Solicitar cambios',
+    requestModificationsPlaceholder: 'Describe los cambios necesarios para aprobar esta actividad...',
+    editActivity: 'Editar actividad',
   },
 
   en: {
@@ -435,7 +482,7 @@ const dict = {
     chatError: 'An error occurred. Please try again.',
     chatSuggestions: [
       'I\'m looking for a climate change activity for secondary school',
-      'Are there TechLARP activities for working on empathy in high school?',
+      'Are there TechLARP activities for working on empathy in secondary school?',
       'I need something short, under 60 minutes, for science',
       'I want a multidisciplinary activity combining history and technology',
     ],
@@ -677,7 +724,35 @@ const dict = {
     previewVersionModified: '✏️ Modified',
     previewVersionModifiedCount: (n: number) => n === 1 ? `modified ${n} time` : `modified ${n} times`,
     previewTranslationDisclaimer: 'This activity was created in another language. The version you see is an automatic translation that may alter to some extent the inclusive and narrative coherence of the original design.',
+    previewSectionSubjects: 'Subjects',
+    previewSectionImages: 'Images',
+    previewSectionNarrative: 'Narrative',
+    previewSectionParallels: 'Narrative ↔ Reality Parallelism',
+    previewSectionMissions: 'Missions',
+    previewSectionRoles: 'Participant Roles',
+    previewSectionCards: 'Game Cards',
+    previewSectionObjectives: 'Learning Objectives',
+    previewSectionInclusionIndex: 'Inclusion Index',
+    previewSectionDesignerEval: 'Designer Evaluation',
+    previewSectionAIAnalysis: 'AI Analysis',
+    previewSectionAlerts: '⚠ Inconsistency Alerts',
+    previewSectionAdditional: 'Additional Information',
+    previewLabelAuthor: 'Author',
+    previewBackToActivities: '← Back to activities',
+    previewReanalyze: 'Re-analyze',
+    previewReanalyzing: 'Analyzing...',
+    previewReanalyzed: '✓ Re-analysis started',
+    previewLabelMaterials2: 'Materials',
+    previewLabelEvaluation2: 'Evaluation',
+    previewLabelTeacherNotes: 'Teacher Notes',
+    previewLabelType: 'Type',
+    previewLabelLore: 'Lore',
+    previewLabelObjective: 'Objective',
+    previewLabelSkill: 'Skill',
+    previewLabelNarrativeProblem: 'Narrative',
+    previewLabelRealConnection: 'Pedagogical',
 
+    // ── Tran
     // ── Translate feature ──
     translateToEn: '🌐 Translate to English',
     translateToEs: '🌐 Translate to Spanish',
@@ -687,17 +762,35 @@ const dict = {
     translateError: 'Error translating. Please try again.',
 
     // ── Status labels ──
-    statusDraft: 'draft',
-    statusReview: 'review',
-    statusPublished: 'published',
-    statusRejected: 'rejected',
+    statusDraft: 'Draft',
+    statusReview: 'In review',
+    statusPublished: 'Published',
+    statusRejected: 'Rejected',
+    statusAccepted: 'Accepted',
+    statusModifications: 'Changes required',
+
+    // ── Inclusion Index ──
+    inclusionScore: 'Inclusion score',
+    inclusionCriteriaMet: 'criteria met',
+    inclusionDesigner: 'Designer evaluation',
+    inclusionLlm: 'AI proposal',
+    inclusionAlerts: 'Alerts',
+
+    // ── Draft auto-save ──
+    saveDraft: 'Save draft',
+    savingDraft: 'Saving...',
+    draftSaved: 'Draft saved',
+    draftSaveError: 'Could not save',
+
+    // ── Admin actions ──
+    requestModifications: 'Request changes',
+    requestModificationsPlaceholder: 'Describe the changes needed to approve this activity...',
+    editActivity: 'Edit activity',
   },
 } as const
 
-export type Dict = {
-  [K in keyof typeof dict.es]: (typeof dict.es)[K] extends readonly string[] ? string[] : string
-}
+export type Dict = typeof dict.es
+
 export function getDictionary(locale: Locale): Dict {
-  return dict[locale] as unknown as Dict
+  return locale === 'en' ? (dict.en as unknown as Dict) : dict.es
 }
-export default dict

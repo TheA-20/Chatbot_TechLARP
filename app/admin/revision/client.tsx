@@ -15,6 +15,8 @@ export default function AdminRevisionClient({ pendientes, docentes, stats }: any
   const [feedback, setFeedback]   = useState('')
   const [motivoId, setMotivoId]   = useState<string | null>(null)
   const [motivo, setMotivo]       = useState('')
+  const [modId, setModId]         = useState<string | null>(null)
+  const [modNotas, setModNotas]   = useState('')
   const [loading, setLoading]     = useState(false)
 
   async function openPreview(id: string) {
@@ -46,6 +48,16 @@ export default function AdminRevisionClient({ pendientes, docentes, stats }: any
       body: JSON.stringify({ edularp_id: id, motivo: m }),
     })
     setMotivoId(null); setMotivo(''); setPreview(null); setLoading(false); router.refresh()
+  }
+
+  async function solicitarModificaciones(id: string, notas: string) {
+    if (!notas.trim()) return
+    setLoading(true)
+    await fetch(`${bp}/api/admin/modificaciones`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ edularp_id: id, notas }),
+    })
+    setModId(null); setModNotas(''); setPreview(null); setLoading(false); router.refresh()
   }
 
   async function toggleDocente(id: string, estadoActual: string) {
@@ -161,7 +173,8 @@ export default function AdminRevisionClient({ pendientes, docentes, stats }: any
                         </svg>
                         Ver detalle
                       </button>
-                      <button onClick={() => aprobar(l.id)} className="btn-success text-xs" disabled={loading}>Aprobar</button>
+                      <button onClick={() => { setModId(l.id); setModNotas('') }} className="text-xs px-2.5 py-1.5 rounded-lg border border-amber-300 text-amber-700 hover:bg-amber-50">Cambios</button>
+                      <button onClick={() => aprobar(l.id)} className="btn-success text-xs" disabled={loading}>Aceptar</button>
                       <button onClick={() => { setMotivoId(l.id); setMotivo('') }} className="btn-danger text-xs">Rechazar</button>
                     </div>
                   </div>
@@ -219,7 +232,8 @@ export default function AdminRevisionClient({ pendientes, docentes, stats }: any
               </button>
               <div className="flex gap-2">
                 <button onClick={() => { setMotivoId(preview.larp.id); setMotivo('') }} className="btn-danger text-xs">Rechazar</button>
-                <button onClick={() => aprobar(preview.larp.id, feedback)} className="btn-success text-xs" disabled={loading}>Aprobar y publicar</button>
+                <button onClick={() => { setModId(preview.larp.id); setModNotas('') }} className="text-xs px-2.5 py-1.5 rounded-lg border border-amber-300 text-amber-700 hover:bg-amber-50">Solicitar cambios</button>
+                <button onClick={() => aprobar(preview.larp.id, feedback)} className="btn-success text-xs" disabled={loading}>Aceptar y publicar</button>
               </div>
             </div>
 
@@ -442,18 +456,53 @@ export default function AdminRevisionClient({ pendientes, docentes, stats }: any
       )}
 
       {/* ── MODAL RECHAZO ── */}
+      {/* Modal rechazo */}
       {motivoId && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-2xl w-full max-w-md p-6">
-            <h3 className="font-medium text-sm mb-1">Motivo de rechazo</h3>
-            <p className="text-xs text-gray-400 mb-3">Este mensaje se enviará al equipo docente autor de la actividad.</p>
-            <textarea className="input h-24 resize-none mb-4" value={motivo}
+            <h3 className="font-medium text-sm mb-1">Rechazar actividad</h3>
+            <p className="text-xs text-gray-400 mb-3">
+              El autor recibirá el motivo del rechazo y no podrá reenviarla a revisión.
+            </p>
+            <textarea
+              className="input h-28 resize-none mb-4"
+              value={motivo}
               onChange={e => setMotivo(e.target.value)}
-              placeholder="Ej: Los objetivos pedagógicos no están suficientemente definidos..." />
+              placeholder="Motivo del rechazo (ej: La actividad no cumple con los criterios de inclusión mínimos)..." />
             <div className="flex gap-3 justify-end">
               <button onClick={() => { setMotivoId(null); setMotivo('') }} className="btn-secondary text-xs">Cancelar</button>
-              <button onClick={() => rechazar(motivoId, motivo)}
-                className="btn-danger text-xs" disabled={!motivo.trim() || loading}>Enviar rechazo</button>
+              <button
+                onClick={() => rechazar(motivoId!, motivo)}
+                className="btn-danger text-xs"
+                disabled={!motivo.trim() || loading}>
+                Confirmar rechazo
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal solicitar modificaciones */}
+      {modId && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl w-full max-w-md p-6">
+            <h3 className="font-medium text-sm mb-1">Solicitar modificaciones</h3>
+            <p className="text-xs text-gray-400 mb-3">
+              El autor recibirá estas notas y podrá editar la actividad antes de reenviarla a revisión.
+            </p>
+            <textarea
+              className="input h-28 resize-none mb-4"
+              value={modNotas}
+              onChange={e => setModNotas(e.target.value)}
+              placeholder="Ej: El Índice de Inclusión está incompleto, faltan evidencias en el criterio II-3..." />
+            <div className="flex gap-3 justify-end">
+              <button onClick={() => { setModId(null); setModNotas('') }} className="btn-secondary text-xs">Cancelar</button>
+              <button
+                onClick={() => solicitarModificaciones(modId!, modNotas)}
+                className="text-xs px-3 py-1.5 rounded-lg bg-amber-600 text-white hover:bg-amber-700 disabled:opacity-50"
+                disabled={!modNotas.trim() || loading}>
+                Enviar solicitud
+              </button>
             </div>
           </div>
         </div>

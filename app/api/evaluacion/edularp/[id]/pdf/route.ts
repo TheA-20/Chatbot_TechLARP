@@ -1,9 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
-import Groq from 'groq-sdk'
 import sql from '@/lib/db'
 import { generateEduLarpPDF, type EduLarpData } from '@/lib/pdf/edularp-pdf'
-
-const groq = new Groq({ apiKey: process.env.GROQ_API_KEY })
+import { callLLMJson } from '@/lib/llm-provider'
 
 async function translateData(data: EduLarpData): Promise<EduLarpData> {
   const payload = {
@@ -23,53 +21,23 @@ async function translateData(data: EduLarpData): Promise<EduLarpData> {
     objetivos: data.objetivos.map(o => ({ tipo: o.tipo, descripcion: o.descripcion })),
   }
 
-  const translateParams = {
-    temperature: 0.1 as const,
-    max_tokens: 8192,
-    response_format: { type: 'json_object' as const },
-    messages: [
-      {
-        role: 'system' as const,
-        content: `You are a professional translator. Translate all Spanish text values in the provided JSON object to English.
+  const TRANSLATE_SYSTEM = `You are a professional translator. Translate all Spanish text values in the provided JSON object to English.
 Rules:
 - Return ONLY valid JSON with exactly the same structure as input.
 - Translate all string values; do NOT change keys.
 - For "objetivos[].tipo", do NOT translate it — keep as is.
 - Null or empty string values must remain null or empty string.
-- Preserve formatting, line breaks, and bullet points.`,
-      },
-      { role: 'user' as const, content: JSON.stringify(payload) },
-    ],
-  }
-
-  let completion
-  try {
-    completion = await groq.chat.completions.create({ model: 'llama-3.3-70b-versatile', ...translateParams })
-  } catch (err: any) {
-    const rateLimited = err?.status === 429 || err?.error?.code === 'rate_limit_exceeded'
-    if (!rateLimited) throw err
-    try {
-      completion = await groq.chat.completions.create({ model: 'llama-3.1-8b-instant', ...translateParams })
-    } catch (err2: any) {
-      const rateLimited2 = err2?.status === 429 || err2?.error?.code === 'rate_limit_exceeded'
-      if (!rateLimited2) throw err2
-      // All Groq rate-limited — fall back to local Ollama
-      const ollamaUrl = process.env.OLLAMA_URL ?? 'http://localhost:11434'
-      const model     = process.env.OLLAMA_CHAT_MODEL ?? 'llama3.2'
-      const res = await fetch(`${ollamaUrl}/v1/chat/completions`, {
-        method:  'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ollama' },
-        body:    JSON.stringify({ model, stream: false, ...translateParams }),
-        signal:  AbortSignal.timeout(180_000),
-      })
-      completion = await res.json()
-    }
-  }
+- Preserve formatting, line breaks, and bullet points.`
 
   let translated: any = {}
   try {
-    translated = JSON.parse(completion.choices[0].message.content ?? '{}')
-  } catch { /* fallback: return original */ }
+    translated = await callLLMJson({
+      system:      TRANSLATE_SYSTEM,
+      messages:    [{ role: 'user', content: JSON.stringify(payload) }],
+      maxTokens:   8192,
+      temperature: 0.1,
+    })
+  } catch { /* fallback: return original data */ }
 
   return {
     ...data,

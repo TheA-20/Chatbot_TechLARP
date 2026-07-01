@@ -31,13 +31,26 @@ export default function BienvenidaPage() {
           {t.welcomeDescription}
         </p>
 
-        {/* Botón acceder */}
-        <Link href="/login" className="btn-primary text-base px-8 py-3 rounded-xl inline-block">
-          {t.welcomeAccess}
-        </Link>
+        {/* Botones de acceso */}
+        <div className="flex flex-col sm:flex-row gap-3 justify-center">
+          <Link href="/login" className="btn-primary text-base px-8 py-3 rounded-xl inline-block">
+            {t.welcomeAccess}
+          </Link>
+          <Link
+            href="/invitado/chat"
+            className="text-base px-8 py-3 rounded-xl border border-gray-200 text-gray-700 hover:bg-gray-50 inline-block text-center"
+          >
+            Probar sin registro
+          </Link>
+        </div>
 
-        {/* Selector de idioma */}
-        <div className="mt-8 flex justify-center">
+        <p className="text-xs text-gray-400 mt-6">
+          <Link href="/registro" className="hover:underline text-primary">
+            ¿No tienes cuenta? Regístrate gratis
+          </Link>
+        </p>
+
+        <div className="mt-8">
           <LanguageSwitcher />
         </div>
       </div>

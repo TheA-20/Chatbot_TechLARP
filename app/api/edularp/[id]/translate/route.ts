@@ -2,9 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import sql from '@/lib/db'
-import Groq from 'groq-sdk'
-
-const groq = new Groq({ apiKey: process.env.GROQ_API_KEY! })
+import { callLLMJson } from '@/lib/llm-provider'
 
 export async function POST(
   req: NextRequest,
@@ -127,36 +125,17 @@ RESTRICCIONES IMPORTANTES:
 - Traduce los arrays de cadenas (p. ej. competencias) traduciendo cada elemento
 - Devuelve ÚNICAMENTE un objeto JSON válido con la misma estructura y claves exactas que el input, sin texto adicional`
 
-  const llmParams = {
-    temperature: 0.1,
-    max_tokens: 8192,
-    response_format: { type: 'json_object' as const },
-    messages: [
-      { role: 'system' as const, content: systemPrompt },
-      { role: 'user' as const, content: JSON.stringify(payload) },
-    ],
-  }
-
-  let rawContent: string
-  try {
-    const r70b = await groq.chat.completions.create({ model: 'llama-3.3-70b-versatile', ...llmParams })
-    rawContent = r70b.choices[0].message.content ?? '{}'
-  } catch (err: any) {
-    const isRateLimit = err?.status === 429 || err?.error?.code === 'rate_limit_exceeded'
-    if (!isRateLimit) return NextResponse.json({ error: 'Error del servicio de traducción' }, { status: 502 })
-    try {
-      const r8b = await groq.chat.completions.create({ model: 'llama-3.1-8b-instant', ...llmParams })
-      rawContent = r8b.choices[0].message.content ?? '{}'
-    } catch {
-      return NextResponse.json({ error: 'Servicio de traducción no disponible (rate limit)' }, { status: 503 })
-    }
-  }
-
   let translated: any
   try {
-    translated = JSON.parse(rawContent!)
-  } catch {
-    return NextResponse.json({ error: 'Error al parsear la traducción' }, { status: 500 })
+    translated = await callLLMJson({
+      system:      systemPrompt,
+      messages:    [{ role: 'user', content: JSON.stringify(payload) }],
+      maxTokens:   8192,
+      temperature: 0.1,
+    })
+  } catch (err: any) {
+    console.error('[translate] LLM call failed:', err?.message ?? err)
+    return NextResponse.json({ error: 'Servicio de traducción no disponible' }, { status: 503 })
   }
 
   // Insert translated LARP record

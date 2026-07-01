@@ -6,10 +6,9 @@ import { translateLarpInMemory } from '@/lib/larp-translate'
 
 export async function GET(_req: NextRequest, { params }: { params: { id: string } }) {
   const session = await getServerSession(authOptions)
-  if (!session) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
-
-  const rol = (session.user as any).rol
-  const userId = (session.user as any).id
+  // Guests (no session) may access published activities only — others need auth
+  const rol    = (session?.user as any)?.rol ?? 'guest'
+  const userId = (session?.user as any)?.id  ?? null
 
   // Requested locale — if a translated version exists, serve that instead
   const lang = _req.nextUrl.searchParams.get('lang') ?? 'es'
@@ -133,6 +132,42 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     return NextResponse.json({ ok: true, id: updated.id, tipo_version: updated.tipo_version, status: updated.status, veces_modificada: updated.veces_modificada })
   } catch (err) {
     console.error('[edularp PATCH] DB error:', err)
+    return NextResponse.json({ error: 'Error interno del servidor' }, { status: 500 })
+  }
+}
+
+// DELETE — eliminar actividad (solo borradores por el autor, o admin puede eliminar cualquiera)
+export async function DELETE(_req: NextRequest, { params }: { params: { id: string } }) {
+  const session = await getServerSession(authOptions)
+  if (!session) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
+
+  const rol    = (session.user as any).rol
+  const userId = (session.user as any).id
+
+  try {
+    const [existing] = await sql`
+      SELECT id, estado, autor_id FROM edularp
+      WHERE id = ${params.id}
+        AND (autor_id = ${userId} OR ${rol} = 'admin')
+    `
+    if (!existing) return NextResponse.json({ error: 'No encontrado o sin permiso' }, { status: 404 })
+
+    if (existing.estado !== 'borrador' && rol !== 'admin') {
+      return NextResponse.json({ error: 'Solo se pueden eliminar borradores' }, { status: 403 })
+    }
+
+    // Eliminar en orden para respetar FK
+    await sql`DELETE FROM notificaciones       WHERE edularp_id = ${params.id}`
+    await sql`DELETE FROM paralelos_realidad   WHERE edularp_id = ${params.id}`
+    await sql`DELETE FROM misiones             WHERE edularp_id = ${params.id}`
+    await sql`DELETE FROM roles_participantes  WHERE edularp_id = ${params.id}`
+    await sql`DELETE FROM cartas_juego         WHERE edularp_id = ${params.id}`
+    await sql`DELETE FROM objetivos            WHERE edularp_id = ${params.id}`
+    await sql`DELETE FROM edularp              WHERE id = ${params.id}`
+
+    return NextResponse.json({ ok: true })
+  } catch (err) {
+    console.error('[edularp DELETE] DB error:', err)
     return NextResponse.json({ error: 'Error interno del servidor' }, { status: 500 })
   }
 }

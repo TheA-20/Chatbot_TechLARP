@@ -116,25 +116,24 @@ export default function ActividadesClient({ larps, isAdmin, userId }: Props) {
                       <p className="text-xs text-gray-400 mt-0.5">
                         {l.nivel_educativo} · {l.asignaturas} · {l.duracion_min} min · {l.num_participantes} {t.participantsLabel}
                       </p>
-                      {/* Inclusion Index badge */}
+                      {/* Inclusion Index score badge */}
                       {l.inclusion_index?.designer &&
-                        Object.keys(l.inclusion_index.designer).length > 0 && (
-                        <span className={`inline-flex items-center gap-1 text-[10px] font-medium mt-1 px-1.5 py-0.5 rounded-full ${
-                          Object.values(l.inclusion_index.designer).filter(
-                            (v: any) => v?.estado && (v?.evidencia?.length ?? 0) >= 30
-                          ).length === 5
-                            ? 'bg-green-50 text-green-700'
-                            : 'bg-amber-50 text-amber-700'
-                        }`}>
-                          <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                            <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z" />
-                          </svg>
-                          Inclusion Index&nbsp;
-                          {Object.values(l.inclusion_index.designer).filter(
-                            (v: any) => v?.estado && (v?.evidencia?.length ?? 0) >= 30
-                          ).length}/{Object.keys(l.inclusion_index.designer).length}
-                        </span>
-                      )}
+                        Object.keys(l.inclusion_index.designer).length > 0 && (() => {
+                          const vals = Object.values(l.inclusion_index.designer) as any[]
+                          const pts = vals.reduce((acc: number, v: any) =>
+                            acc + (v?.estado === 'cumple' ? 1 : v?.estado === 'parcial' ? 0.5 : 0), 0)
+                          const score = Math.round((pts / vals.length) * 100)
+                          const color = score >= 80 ? 'bg-green-50 text-green-700' : score >= 50 ? 'bg-amber-50 text-amber-700' : 'bg-red-50 text-red-600'
+                          return (
+                            <span className={`inline-flex items-center gap-1 text-[10px] font-medium mt-1 px-1.5 py-0.5 rounded-full ${color}`}>
+                              <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                              </svg>
+                              Inclusión&nbsp;<strong>{score}%</strong>
+                            </span>
+                          )
+                        })()
+                      }
                     </div>
 
                     <div className="flex items-center gap-2 flex-shrink-0">
@@ -167,6 +166,19 @@ export default function ActividadesClient({ larps, isAdmin, userId }: Props) {
                         )}
                         PDF
                       </button>
+                      {/* Editar — solo admins desde actividades */}
+                      {isAdmin && (
+                        <Link
+                          href={`/formulario/${l.id}/editar`}
+                          className="flex items-center gap-1.5 text-xs text-indigo-600 hover:text-indigo-800 border border-indigo-200 hover:border-indigo-300 rounded-lg px-2.5 py-1.5 transition-colors"
+                          title={t.editActivity}
+                        >
+                          <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                          </svg>
+                          Editar
+                        </Link>
+                      )}
                       {(l.autor_id === userId || isAdmin) && (
                         <button
                           onClick={() => handleTranslate(l.id, l.nombre, l.idioma_original ?? 'es')}
@@ -187,21 +199,14 @@ export default function ActividadesClient({ larps, isAdmin, userId }: Props) {
                           )}
                         </button>
                       )}
-                      <span className="badge-approved">{t.statusPublished}</span>
                     </div>
                   </div>
-
-                  {l.autor_nombre && (
-                    <p className="text-xs text-gray-300 mt-2">
-                      {l.autor_nombre} · {t.created} {new Date(l.creado_en).toLocaleDateString(locale === 'es' ? 'es-ES' : 'en-US')}
-                    </p>
-                  )}
                 </div>
               </div>
             ))}
-          </div>
-        )}
-      </main>
-    </div>
-  )
-}
+            </div>
+          )}
+        </main>
+      </div>
+    )
+  }

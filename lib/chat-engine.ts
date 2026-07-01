@@ -1,7 +1,6 @@
-import Groq from 'groq-sdk'
 import sql from '@/lib/db'
-
-const groq = new Groq({ apiKey: process.env.GROQ_API_KEY! })
+import { callLLM, PRIMARY_LLM } from '@/lib/llm-provider'
+import { revisarLenguajeInclusivo } from '@/lib/inclusive-review'
 
 // ---------------------------------------------------------------------------
 // SSRF guard — OLLAMA_URL must resolve to localhost/127.0.0.1 only.
@@ -84,11 +83,6 @@ async function nvidiaChat(
   return data.choices?.[0]?.message?.content ?? ''
 }
 
-function isRateLimit(err: any): boolean {
-  return err?.status === 429 || 
-         err?.error?.code === 'rate_limit_exceeded' ||
-         err?.error?.error?.code === 'rate_limit_exceeded'
-}
 
 export interface ChatEngineInput {
   mensaje: string
@@ -160,7 +154,7 @@ export async function runChatEngine(input: ChatEngineInput): Promise<ChatEngineR
     }
 
     // Coincidencia de etapa educativa (infantil/primaria/secundaria/eso/bachillerato/fp)
-    const etapas = ['infantil', 'primaria', 'secundaria', 'bachillerato', 'eso', 'fp']
+    const etapas = ['infantil', 'primaria', 'secundaria', 'eso']
     const nivelNorm = normalizar(candidato.nivel_educativo || '')
     if (etapas.some((e) => nivelNorm.includes(e) && q.includes(e))) {
       boost += 0.04
@@ -289,7 +283,7 @@ Before making any specific recommendation, adaptation, or detailed suggestion, y
 READ THE MESSAGE CAREFULLY — CRITICAL: Before asking anything, re-read everything the user has written so far, including their first message even if it is a single sentence combining several data points. If that information already covers all four items, do NOT ask anything about context: go DIRECTLY to recommending an activity, citing those same details back to the user.
 If something is still missing, ask ONLY for the FIRST missing item following the order above, one item per turn (one question per message — never two at once).
 ONE ANSWER PER ITEM IS ENOUGH — do not ask for more precision within an item that's already answered: if the user says "maths" or "maths in general", that ALREADY counts as item 2 complete. Do NOT ask about sub-topics (algebra, geometry, logic, teamwork, etc.) — that is a design detail, not a mandatory item, and can be folded into the recommendation afterward.
-THE SAME APPLIES TO ITEM 1 (LEVEL): if the user says "secondary", "primary", "2nd grade ESO", "high school", etc., that ALREADY counts as item 1 complete. Do NOT ask for the exact grade within that stage (e.g. "which year of secondary — 1st, 2nd, 3rd, or 4th?") and do NOT ask about the group's prior experience, prior knowledge, or any other nuance — fold those in later as a refinement of the recommendation, never as a mandatory question beforehand.
+THE SAME APPLIES TO ITEM 1 (LEVEL): if the user says "secondary", "primary", "2nd grade ESO", "4th year primary", etc., that ALREADY counts as item 1 complete. Do NOT ask for the exact grade within that stage (e.g. "which year of secondary — 1st, 2nd, 3rd, or 4th?") and do NOT ask about the group's prior experience, prior knowledge, or any other nuance — fold those in later as a refinement of the recommendation, never as a mandatory question beforehand.
 Do NOT skip ahead to sub-topics, preferences, or design details until all four are known.
 Do NOT suggest any activity or give names from the repository until you have ALL FOUR items.
 NEVER re-ask for an item the user already gave in ANY earlier message of this conversation. NEVER invent or repeat example numbers (minutes, number of sessions, group size) that the user did not actually write — always use their exact values.
@@ -323,11 +317,48 @@ RULES:
 - IMPORTANT: Do NOT proactively list or recommend specific activities in every message. Only name or describe a specific activity when the user explicitly asks for a recommendation, asks which activity fits their situation, or asks about a specific activity by name. In greetings, methodology questions, or general design discussions, do not bring up activity names.
 - EXCEPTION — CONCEPT EXPLANATIONS: If the teacher asks for help understanding or explaining a concept in order to prepare or teach an activity (e.g. "help me understand X so I can explain it to my students"), and the repository contains an activity directly built around that same concept, you MAY add ONE short closing sentence naming that activity (e.g. "By the way, this concept is at the core of the activity '[NAME]' — would you like to know more about it?"). Keep this to a single sentence at the end, after the explanation.
 - STEM ONLY: TechLARP is an EXCLUSIVELY STEM platform (Science, Technology, Engineering and Mathematics). If the teacher mentions subjects outside STEM (History, Literature, Language Arts, Music, Art, Physical Education, Philosophy, etc.), kindly remind them that the repository only covers STEM areas and redirect the conversation towards which STEM area could complement their educational goals.
-- SCOPE — EDUCATIONAL LEVEL: TechLARP's repository covers pre-university levels only (early childhood education, primary, secondary/ESO, baccalaureate, and vocational training). If the teacher asks for activities for university students or higher education, do NOT ask generic clarifying questions (time available, group size, etc.) — kindly explain that the repository is designed for pre-university levels, and ask if they're looking for something for a pre-university group instead.
+- SCOPE — EDUCATIONAL LEVEL: TechLARP's repository covers primary and secondary education only (including early childhood and ESO/compulsory secondary). If the teacher asks for activities for baccalaureate, vocational training, university, or any other level beyond secondary, do NOT ask generic clarifying questions (time available, group size, etc.) — kindly explain that the repository is designed for primary and secondary levels, and ask if they're looking for something for a primary or secondary group instead.
 - SCOPE — REQUEST TYPE: TechLARP provides LARP-based educational activities (missions, roles, narrative scenarios) — NOT exams, tests, quizzes, worksheets, or other assessment instruments. If the teacher asks for an exam, test, quiz, or similar evaluation material, do NOT search for a matching activity or ask generic clarifying questions — kindly clarify that TechLARP offers LARP activities rather than assessment tools, and ask if they'd like a LARP activity on a related topic instead.
 - ⚠️ DOWNLOAD — CRITICAL: When a user says anything like "download", "download PDF", "get the PDF", "save the file", or similar, you MUST reply that the PDF download button appears just below this message. NEVER say you cannot provide files. NEVER say you are a text-only assistant. The download button is ALWAYS available.
 - INTERACTIVE PREVIEW: This interface has a side panel that shows full activity details (missions, roles, cards, parallels, objectives). When you recommend a specific activity, ALWAYS end with: "Would you like to know more about this activity, or would you prefer I suggest other options?" ONLY when the user explicitly confirms they want that activity (replies "yes", "that one", "I like it", "show me", "that's it", "go ahead", "more about it", "tell me more" or similar confirmation), include the exact token <<VISTA_PREVIA>> at the very start of your response. If the user asks for other options or wants to change, do NOT include <<VISTA_PREVIA>>.
-- ⚠️ TRANSLATION — CRITICAL: The database stores activity data in Spanish. You are currently in an ENGLISH session. You MUST translate EVERYTHING into English before presenting it: activity names, subjects, level, duration, descriptions, missions, roles, objectives, parallels, evaluation, materials. NEVER show raw Spanish text to the user. If the activity name or any field is in Spanish, translate it.${contextoDetallado}`
+- ⚠️ TRANSLATION — CRITICAL: The database stores activity data in Spanish. You are currently in an ENGLISH session. You MUST translate EVERYTHING into English before presenting it: activity names, subjects, level, duration, descriptions, missions, roles, objectives, parallels, evaluation, materials. NEVER show raw Spanish text to the user. If the activity name or any field is in Spanish, translate it.
+
+═══════════════════════════════════════════════════════
+GENDER-NEUTRAL LANGUAGE — CORRECT PATTERNS
+(Memorize these. Apply them consistently in every response.)
+═══════════════════════════════════════════════════════
+
+Always use gender-neutral or gender-inclusive forms:
+  "teachers" not "the teacher" (avoid generic singular)
+  "students" not "the students" (article often optional)
+  "participants" or "players" for LARP contexts
+  "they/them" when referring to a single person of unknown gender
+  "facilitators" not "the instructor"
+
+CORRECT RESPONSE EXAMPLES:
+
+Greeting:
+  "Hi! I'm the TechLARP Assistant. How can I help you today?"
+
+Recommending an activity:
+  "Based on that — technology, Year 2 secondary, 50 minutes, group of 20 — I'd recommend [NAME]. Would you like to know more about this activity, or would you prefer I suggest other options?"
+
+Referring to teachers:
+  "Teachers can adapt the mission duration to suit the group's pace."
+  "Facilitators should read the instructions before the session."
+
+Referring to students:
+  "Students work in groups of four during the mission phase."
+  "Participants choose their role at the start of the activity."
+  "Players receive a skill card when they begin."
+
+Talking about game mechanics:
+  "Each player has a unique skill described on their card."
+  "Players collaborate to solve the central challenge."
+
+NEVER use:
+  "the boys" / "the girls" (unless quoting original design intent)
+  "he" or "she" as a default for unknown gender${contextoDetallado}`
     : `Eres el Asistente TechLARP, especialista en diseño de actividades educativas basadas en LARP. Ayudas a docentes a entender, adaptar y crear actividades TechLARP completamente dentro de esta conversación — sin necesidad de otras herramientas ni ventanas.
 
 TONO Y FORMATO:
@@ -380,7 +411,7 @@ Antes de hacer cualquier recomendación concreta, adaptación o sugerencia detal
 ANÁLISIS DEL MENSAJE — CRÍTICO: Antes de preguntar nada, relee con cuidado TODO lo que el usuario ha escrito hasta ahora, incluido su primer mensaje aunque sea uno solo y combine varios datos en la misma frase. Si esa información ya cubre los cuatro puntos, NO preguntes NADA de contexto: pasa DIRECTAMENTE a recomendar una actividad citando esos mismos datos.
 Si falta algún dato, pregunta SOLO por el PRIMER dato que falte siguiendo el orden de la lista, uno por turno (una sola pregunta por mensaje — nunca dos a la vez).
 UN DATO YA DADO ES SUFICIENTE — no pidas más precisión dentro de ese mismo dato: si el usuario dice "matemáticas" o "matemáticas en general", eso YA CUENTA como dato 2 completo. NO preguntes por sub-áreas (álgebra, geometría, lógica, trabajo en equipo, etc.) — eso es un detalle de diseño, no un dato obligatorio, y se puede incorporar después como matiz de la recomendación.
-LO MISMO APLICA AL DATO 1 (NIVEL): si el usuario dice "secundaria", "primaria", "2.º de la ESO", "bachillerato", etc., eso YA CUENTA como dato 1 completo. NO preguntes por el curso exacto dentro de esa etapa (p.ej. "¿1.º, 2.º, 3.º o 4.º de ESO?") ni por el nivel de experiencia previa del grupo, conocimientos previos, o cualquier otro matiz — son detalles que puedes incorporar después como ajuste de la recomendación, nunca como pregunta obligatoria previa.
+LO MISMO APLICA AL DATO 1 (NIVEL): si el usuario dice "secundaria", "primaria", "2.º de la ESO", "4.º de primaria", etc., eso YA CUENTA como dato 1 completo. NO preguntes por el curso exacto dentro de esa etapa (p.ej. "¿1.º, 2.º, 3.º o 4.º de ESO?") ni por el nivel de experiencia previa del grupo, conocimientos previos, o cualquier otro matiz — son detalles que puedes incorporar después como ajuste de la recomendación, nunca como pregunta obligatoria previa.
 NO saltes a subtemas, preferencias o detalles de diseño hasta tener los cuatro.
 NO menciones ninguna actividad del repositorio ni des sugerencias específicas hasta tener LOS CUATRO datos.
 PROHIBIDO re-preguntar por un dato que el usuario ya dio en CUALQUIER mensaje anterior de esta conversación. PROHIBIDO inventar o repetir cifras de ejemplo (minutos, número de sesiones, tamaño de grupo) que no haya escrito el propio usuario — usa siempre sus valores exactos.
@@ -414,95 +445,152 @@ REGLAS:
 - IMPORTANTE: No nombres ni recomiendes actividades concretas de forma proactiva en cada mensaje. Solo menciona o describe una actividad específica cuando el usuario pida explícitamente una recomendación, pregunte cuál se adapta a su caso, o nombre una actividad concreta. En saludos, preguntas de metodología o diseño general, no traigas a colación nombres de actividades.
 - EXCEPCIÓN — EXPLICACIONES DE CONCEPTOS: Si la docente pide ayuda para entender o explicar un concepto con el fin de preparar o impartir una actividad (p.ej. "ayúdame a entender X para poder explicárselo a mis estudiantes"), y el repositorio tiene una actividad construida directamente sobre ese mismo concepto, PUEDES añadir UNA frase breve al final nombrando esa actividad (p.ej. "Por cierto, este concepto es el eje de la actividad '[NOMBRE]' — ¿quieres saber más sobre ella?"). Limítalo a una sola frase al final, después de la explicación.
 - SOLO STEM: TechLARP es una plataforma EXCLUSIVAMENTE de actividades STEM (Ciencias, Tecnología, Ingeniería y Matemáticas). Si la docente menciona asignaturas fuera del ámbito STEM (Historia, Literatura, Lengua, Arte, Música, Educación Física, Filosofía, etc.), recuérdale amablemente que el repositorio cubre únicamente áreas STEM y redirige la conversación hacia qué área STEM podría complementar sus objetivos educativos.
-- ALCANCE — NIVEL EDUCATIVO: El repositorio de TechLARP cubre únicamente niveles preuniversitarios (educación infantil, primaria, secundaria/ESO, bachillerato y FP). Si la docente pide actividades para estudiantes universitarios o de educación superior, NO hagas preguntas genéricas de contexto (tiempo disponible, tamaño del grupo, etc.) — explica amablemente que el repositorio está diseñado para niveles preuniversitarios y pregunta si busca algo para un grupo preuniversitario.
+- ALCANCE — NIVEL EDUCATIVO: El repositorio de TechLARP cubre únicamente educación primaria y secundaria (incluyendo educación infantil y la ESO). Si la docente pide actividades para bachillerato, FP, universidad o cualquier nivel más allá de la secundaria obligatoria, NO hagas preguntas genéricas de contexto (tiempo disponible, tamaño del grupo, etc.) — explica amablemente que el repositorio está diseñado para primaria y secundaria, y pregunta si busca algo para un grupo de primaria o secundaria.
 - ALCANCE — TIPO DE PETICIÓN: TechLARP ofrece actividades educativas basadas en LARP (misiones, roles, escenarios narrativos), NO exámenes, pruebas tipo test, cuestionarios ni material de evaluación. Si la docente pide un examen, prueba tipo test, cuestionario o similar, NO busques una actividad que encaje ni hagas preguntas genéricas de contexto — aclara amablemente que TechLARP ofrece actividades LARP en lugar de herramientas de evaluación, y pregunta si le interesaría una actividad LARP sobre un tema relacionado.
 - ⚠️ DESCARGA — CRÍTICO: Cuando el usuario diga "descargar", "descargar PDF", "descarga", "quiero el PDF" o similar, DEBES responder que el botón de descarga del PDF aparece justo debajo de este mensaje. NUNCA digas que no puedes proporcionar archivos. NUNCA digas que eres solo un asistente de texto. El botón de descarga SIEMPRE está disponible.
-- VISTA PREVIA INTERACTIVA: Esta interfaz tiene un panel lateral que muestra todos los detalles de una actividad (misiones, roles, cartas, paralelos, objetivos). Cuando recomiendes una actividad concreta, termina SIEMPRE con: "¿Quieres saber más sobre esta actividad o prefieres que mencione otras opciones?" SÓLO cuando el usuario confirme explícitamente que quiere esa actividad (responda "sí", "esa", "me gusta", "quiero verla", "muestramela", "esa misma", "perfecto", "adelante", "saber más" o similar confirmación), incluye la cadena exacta <<VISTA_PREVIA>> al inicio de tu respuesta. Si el usuario pide otras opciones o quiere cambiar, NO incluyas <<VISTA_PREVIA>>.${contextoDetallado}`
+- VISTA PREVIA INTERACTIVA: Esta interfaz tiene un panel lateral que muestra todos los detalles de una actividad (misiones, roles, cartas, paralelos, objetivos). Cuando recomiendes una actividad concreta, termina SIEMPRE con: "¿Quieres saber más sobre esta actividad o prefieres que mencione otras opciones?" SÓLO cuando el usuario confirme explícitamente que quiere esa actividad (responda "sí", "esa", "me gusta", "quiero verla", "muestramela", "esa misma", "perfecto", "adelante", "saber más" o similar confirmación), incluye la cadena exacta <<VISTA_PREVIA>> al inicio de tu respuesta. Si el usuario pide otras opciones o quiere cambiar, NO incluyas <<VISTA_PREVIA>>.
+
+═══════════════════════════════════════════════════════
+EJEMPLOS DE LENGUAJE INCLUSIVO — PATRONES CORRECTOS
+(Memoriza estos patrones. Son los errores más frecuentes.)
+═══════════════════════════════════════════════════════
+
+❌ MAL → ✅ BIEN (sustituciones directas obligatorias):
+  "los docentes"          → "docentes" o "el profesorado"
+  "los profesores"        → "docentes" o "el profesorado"
+  "el docente"            → "la persona docente" o "quien facilita"
+  "los alumnos"           → "estudiantes"
+  "las alumnas"           → "estudiantes"  ← TAMBIÉN prohibido
+  "el alumnado"           → "estudiantes"  ← TAMBIÉN prohibido
+  "los estudiantes"       → "estudiantes" (quitar el artículo)
+  "los jugadores"         → "quienes juegan" o "las jugadoras"
+  "el jugador"            → "quien juega" o "la jugadora"
+  "los participantes"     → "quienes participan" o "estudiantes"
+  "los usuarios"          → "quienes usan la plataforma"
+
+EJEMPLOS DE RESPUESTAS COMPLETAS CORRECTAS:
+
+Saludo inicial:
+✅ "¡Hola! Soy el Asistente TechLARP. ¿En qué puedo ayudarte hoy?"
+
+Recomendando una actividad:
+✅ "Para ese contexto —tecnología, 2.º de ESO, 50 minutos y un grupo de 20— te recomiendo [NOMBRE]. ¿Quieres saber más sobre esta actividad o prefieres que mencione otras opciones?"
+
+Explicando el rol del docente:
+✅ "Docentes pueden adaptar la duración de cada misión según el ritmo del grupo."
+✅ "El profesorado decide cómo distribuir los roles al inicio de la sesión."
+✅ "Quien facilita la actividad debe leer las instrucciones antes de la sesión."
+
+Hablando de estudiantes:
+✅ "Estudiantes trabajan en grupos de cuatro durante la fase de misiones."
+✅ "Las participantes eligen su rol al inicio de la actividad."
+✅ "Quienes participan reciben una carta de habilidad al comenzar."
+
+Hablando de mecánicas de juego:
+✅ "Quienes juegan deben completar las tres misiones en orden."
+✅ "Cada jugadora tiene una habilidad especial descrita en su carta."
+✅ "Las jugadoras colaboran para resolver el reto central."
+
+Respondiendo sobre adaptaciones:
+✅ "Para adaptar esta actividad, docentes pueden reducir el número de misiones a dos."
+✅ "El profesorado puede ajustar la dificultad según el nivel del grupo."
+
+Respondiendo sobre materiales:
+✅ "Estudiantes necesitan acceso a un ordenador o tablet por grupo."
+✅ "El material incluye cartas de rol, una guía para quien facilita y fichas de misión."
+
+NUNCA uses estas formas aunque parezcan naturales:
+  ✗ "los alumnos" / "las alumnas" / "el alumnado"
+  ✗ "los docentes" / "el docente" / "los profesores"
+  ✗ "los jugadores" / "el jugador"
+  ✗ "los usuarios"
+  ✗ "los participantes" / "los estudiantes"
+${contextoDetallado}`
 
   // 7. Llamada al LLM con fallback en cascada:
-  //    Groq 70B → Groq 8B → NVIDIA NIM (Llama 3.3 70B) → Ollama local
-  // Use more tokens when RAG context is active (tables, detailed descriptions); less for simple chat.
+  //
+  //  LLM_PROVIDER=claude (defecto):
+  //    Claude -> Groq 70B -> Groq 8B -> NVIDIA NIM -> Ollama local
+  //
+  //  LLM_PROVIDER=groq (comportamiento original):
+  //    Groq 70B -> Groq 8B -> NVIDIA NIM -> Ollama local
+  //
+  //  FORCE_LOCAL_LLM=true  -> Ollama directamente (bypass todo)
+  //  FORCE_NVIDIA_LLM=true -> NVIDIA NIM directamente (bypass todo)
   const maxTokensOutput = matchedLarps.length > 0 ? 700 : 450
 
   let textoRespuesta = ''
-  const chatMessages = [
+
+  // Mensajes en formato OpenAI-compatible para los fallbacks NVIDIA/Ollama
+  const chatMessagesCompat = [
     { role: 'system' as const, content: systemPrompt },
     ...historialLimitado,
     ...refuerzoInclusivo,
     { role: 'user' as const, content: mensaje },
   ]
 
-  // FORCE_LOCAL_LLM=true → saltar Groq por completo y usar Ollama local.
-  // Útil para evaluaciones/pruebas masivas sin consumir cuota de Groq
-  // mientras la API key se usa en paralelo en otro entorno.
-  //
-  // FORCE_NVIDIA_LLM=true → saltar Groq por completo y usar NVIDIA NIM con
-  // Llama 3.3 70B Instruct (mismo modelo que Groq, cuota gratuita
-  // independiente). Útil para evals que necesitan un baseline 70B real sin
-  // tocar la cuota de Groq.
   if (process.env.FORCE_LOCAL_LLM === 'true') {
-    console.warn('[ChatEngine] FORCE_LOCAL_LLM=true → usando Ollama local, Groq omitido')
-    textoRespuesta = await ollamaChat(chatMessages, maxTokensOutput, 0.3)
+    console.warn('[ChatEngine] FORCE_LOCAL_LLM=true -> usando Ollama local')
+    textoRespuesta = await ollamaChat(chatMessagesCompat, maxTokensOutput, 0.3)
   } else if (process.env.FORCE_NVIDIA_LLM === 'true') {
-    console.warn('[ChatEngine] FORCE_NVIDIA_LLM=true → usando NVIDIA NIM (Llama 3.3 70B), Groq omitido')
-    textoRespuesta = await nvidiaChat(chatMessages, maxTokensOutput, 0.3)
+    console.warn('[ChatEngine] FORCE_NVIDIA_LLM=true -> usando NVIDIA NIM')
+    textoRespuesta = await nvidiaChat(chatMessagesCompat, maxTokensOutput, 0.3)
   } else {
     try {
-      const r = await groq.chat.completions.create({
-        model: 'llama-3.3-70b-versatile', max_tokens: maxTokensOutput, temperature: 0.3, messages: chatMessages,
+      textoRespuesta = await callLLM({
+        system:       systemPrompt,
+        systemAppend: refuerzoInclusivo[0]?.content,
+        messages:     [
+          ...historialLimitado.map((m: any) => ({ role: m.role as 'user' | 'assistant', content: m.content as string })),
+          { role: 'user' as const, content: mensaje },
+        ],
+        maxTokens:    maxTokensOutput,
+        temperature:  0.3,
       })
-      textoRespuesta = r.choices[0]?.message?.content ?? ''
+      console.info(`[ChatEngine] LLM_PROVIDER=${PRIMARY_LLM} respondio OK`)
     } catch (err: any) {
-      if (!isRateLimit(err)) throw err
-      console.warn('[ChatEngine] llama-3.3-70b-versatile rate-limited → trying llama-3.1-8b-instant')
+      console.warn('[ChatEngine] Cascada principal agotada -> intentando NVIDIA NIM')
       try {
-        const r = await groq.chat.completions.create({
-          model: 'llama-3.1-8b-instant', max_tokens: maxTokensOutput, temperature: 0.3, messages: chatMessages,
-        })
-        textoRespuesta = r.choices[0]?.message?.content ?? ''
+        textoRespuesta = await nvidiaChat(chatMessagesCompat, maxTokensOutput, 0.3)
       } catch (err2: any) {
-        if (!isRateLimit(err2)) throw err2
-        console.warn('[ChatEngine] All Groq models rate-limited → trying NVIDIA NIM (Llama 3.3 70B)')
+        console.warn(`[ChatEngine] NVIDIA NIM no disponible (${err2?.message ?? err2}) -> Ollama local`)
         try {
-          textoRespuesta = await nvidiaChat(chatMessages, maxTokensOutput, 0.3)
-        } catch (err3: any) {
-          console.warn(`[ChatEngine] NVIDIA NIM unavailable (${err3?.message ?? err3}) → falling back to local Ollama`)
-          try {
-            textoRespuesta = await ollamaChat(chatMessages, maxTokensOutput, 0.3)
-          } catch {
-            const e = new Error('RATE_LIMIT_EXHAUSTED') as any
-            e.isRateLimit = true
-            throw e
-          }
+          textoRespuesta = await ollamaChat(chatMessagesCompat, maxTokensOutput, 0.3)
+        } catch {
+          const e = new Error('RATE_LIMIT_EXHAUSTED') as any
+          e.isRateLimit = true
+          throw e
         }
       }
     }
   }
 
-  // 8. Detectar señal de confirmación de vista previa
+  // 8. Detectar senal de confirmacion de vista previa
   const openPreview = textoRespuesta.includes('<<VISTA_PREVIA>>')
   if (openPreview) {
     textoRespuesta = textoRespuesta.replace(/<<VISTA_PREVIA>>\s*/g, '').trimStart()
   }
 
-  // 9. Determinar botones de descarga — solo cuando la respuesta menciona explícitamente una actividad
-  // Se construye un Set de nombres mencionados de forma exacta (coincidencia de palabra completa)
-  // para evitar falsos positivos cuando un nombre es subconjunto de otro (e.g. "Robótica" vs "Robótica Avanzada").
+  // 8b. Revision post-procesada de lenguaje inclusivo (solo ES, solo si hay infraccion).
+  //     Usa Haiku internamente para corregir con latencia minima.
+  //     Si la revision falla, el texto original se envia sin interrumpir el flujo.
+  const { texto: textoRevisado } = await revisarLenguajeInclusivo(textoRespuesta, locale)
+  textoRespuesta = textoRevisado
+
+  // 9. Determinar botones de descarga
   const respuestaLower = textoRespuesta.toLowerCase()
   const nombresEnRespuesta = new Set<string>(
     allLarps
       .map((l: any) => l.nombre.toLowerCase())
       .filter((nombre: string) => {
-        // Escapar caracteres especiales de regex
         const escaped = nombre.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
-        return new RegExp(`(?<![\\w\u00C0-\u024F])${escaped}(?![\\w\u00C0-\u024F])`, 'i').test(respuestaLower)
+        return new RegExp(`(?<![\\wÀ-ɏ])${escaped}(?![\\wÀ-ɏ])`, 'i').test(respuestaLower)
       })
   )
   const larpsEnRespuesta = allLarps.filter((l: any) => nombresEnRespuesta.has(l.nombre.toLowerCase()))
-  // Show max 3 activities per response; remaining candidates available on follow-up.
   const larpsParaDescargaFinal: any[] = larpsEnRespuesta.slice(0, 3)
 
-  // Guardia anti-alucinación (log)
+  // Guardia anti-alucinacion (log)
   const nombresAutorizados = allLarps.map((l: any) => l.nombre.toLowerCase())
   const posibleAlucinacion = !isEN &&
     !matchedLarps.some((l: any) => respuestaLower.includes(l.nombre.toLowerCase())) &&
@@ -510,8 +598,7 @@ REGLAS:
     !nombresAutorizados.some((n: string) => respuestaLower.includes(n))
 
   if (posibleAlucinacion) {
-    console.warn('[RAG] Posible alucinación detectada en respuesta — revisar:', textoRespuesta.slice(0, 120))
-    // No mostrar el aviso al docente — solo log interno
+    console.warn('[RAG] Posible alucinacion detectada en respuesta -- revisar:', textoRespuesta.slice(0, 120))
   }
 
   return { textoRespuesta, larpsParaDescargaFinal, openPreview, matchedLarps, allLarps, ragTopCandidates }

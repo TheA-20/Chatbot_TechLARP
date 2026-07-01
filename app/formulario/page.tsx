@@ -1,5 +1,5 @@
 'use client'
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect, useCallback } from 'react'
 import { useForm, useFieldArray } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { edularpSchema, type EduLarpForm } from '@/lib/schemas/edularp.schema'
@@ -133,6 +133,19 @@ export default function FormularioPage() {
   const [paso, setPaso]       = useState(0)
   const [enviado, setEnviado] = useState(false)
   const [error, setError]     = useState('')
+  // Auto-save draft — persiste draftId en localStorage para sobrevivir recargas
+  const DRAFT_KEY = 'edularp_draft_id'
+  const [draftId, setDraftIdState] = useState<string | null>(() => {
+    if (typeof window !== 'undefined') return localStorage.getItem(DRAFT_KEY)
+    return null
+  })
+  function setDraftId(id: string | null) {
+    setDraftIdState(id)
+    if (id) localStorage.setItem(DRAFT_KEY, id)
+    else localStorage.removeItem(DRAFT_KEY)
+  }
+  const [autoSaveStatus, setAutoSave] = useState<'idle'|'saving'|'saved'|'error'>('idle')
+  const autoSaveTimer                 = useRef<ReturnType<typeof setTimeout> | null>(null)
   const [jsonStatus, setJsonStatus] = useState<'idle'|'ok'|'error'>('idle')
   const [uploading, setUploading]   = useState(false)
   const [uploadError, setUploadError] = useState('')
@@ -305,6 +318,61 @@ export default function FormularioPage() {
     inclusion_index: 6,
   }
 
+  // ── Auto-save draft ──────────────────────────────────────────────
+  const saveDraftNow = useCallback(async (data: EduLarpForm) => {
+    // Only save if the user has filled the minimum required fields
+    if (!data.nombre?.trim() || !data.nivel_educativo) return
+    setAutoSave('saving')
+    try {
+      const payload = {
+        ...data,
+        tipo_version: 'original',
+        idioma_original: locale,
+        status: 'borrador',
+        estado: 'borrador',
+        inclusion_index: Object.keys(inclusionIndex).length > 0
+          ? { designer: inclusionIndex, rubric_version: '1.0' }
+          : null,
+      }
+      if (draftId) {
+        // PATCH existing draft
+        await fetch(`${bp}/api/edularp/${draftId}/editar`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ ...payload, estado: 'borrador' }),
+        })
+      } else {
+        // POST new draft
+        const res = await fetch(`${bp}/api/edularp`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        })
+        if (res.ok) {
+          const json = await res.json()
+          if (json?.id) setDraftId(json.id)
+        }
+      }
+      setAutoSave('saved')
+      setTimeout(() => setAutoSave('idle'), 3000)
+    } catch {
+      setAutoSave('error')
+      setTimeout(() => setAutoSave('idle'), 3000)
+    }
+  }, [draftId, inclusionIndex, locale])
+
+  // Watch form values and debounce auto-save every 15s after first change
+  const formValues = watch()
+  useEffect(() => {
+    if (autoSaveTimer.current) clearTimeout(autoSaveTimer.current)
+    autoSaveTimer.current = setTimeout(() => {
+      saveDraftNow(formValues)
+    }, 15000)
+    return () => { if (autoSaveTimer.current) clearTimeout(autoSaveTimer.current) }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [JSON.stringify(formValues)])
+  // ─────────────────────────────────────────────────────────────────
+
   async function onSubmit(data: EduLarpForm) {
     setError('')
     // Validate 5 designer criteria before sending
@@ -347,7 +415,7 @@ export default function FormularioPage() {
           }, null)
           if (targetPaso !== null) setPaso(targetPaso)
           const fieldMsgs = failedFields
-            .flatMap((f: string) => (d.detalles.fieldErrors[f] as string[]).map((m: string) => `· ${f}: ${m}`))
+            .flatMap((f: string) => (d.detalles.fieldErrors[f] as unknown as string[]).map((m: string) => `· ${f}: ${m}`))
             .join('\n')
           setError(`Datos incompletos:\n${fieldMsgs}`)
         } else {
@@ -356,6 +424,7 @@ export default function FormularioPage() {
         return
       }
       setEnviado(true)
+    localStorage.removeItem(DRAFT_KEY)
     } catch { setError(t.networkError) }
   }
 
@@ -396,7 +465,24 @@ export default function FormularioPage() {
           <div className="flex justify-center pointer-events-none">
             <Image src={`${process.env.NEXT_PUBLIC_BASE_PATH || ''}/TechLARP-logo-02.png`} alt="TechLARP" width={900} height={225} className="h-7 w-auto sm:h-48 sm:-my-[4.5rem]" priority />
           </div>
-          <div className="flex justify-end">
+          <div className="flex justify-end items-center gap-3">
+            {/* Auto-save indicator */}
+            {autoSaveStatus !== 'idle' && (
+              <span className={`text-[11px] flex items-center gap-1 ${
+                autoSaveStatus === 'saving' ? 'text-gray-400' :
+                autoSaveStatus === 'saved'  ? 'text-green-600' : 'text-red-500'
+              }`}>
+                {autoSaveStatus === 'saving' && (
+                  <svg className="w-3 h-3 animate-spin" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
+                  </svg>
+                )}
+                {autoSaveStatus === 'saved'  && '✓'}
+                {autoSaveStatus === 'error'  && '✕'}
+                {t[autoSaveStatus === 'saving' ? 'savingDraft' : autoSaveStatus === 'saved' ? 'draftSaved' : 'draftSaveError']}
+              </span>
+            )}
             <LanguageSwitcher />
           </div>
         </div>
@@ -882,8 +968,8 @@ export default function FormularioPage() {
               <div className="card space-y-2">
                 <label className="label">{t.iiStatusLabel}</label>
                 <select className="input" {...register('status')}>
-                  {(t.iiStatusOptions as string[]).map((val, i) => (
-                    <option key={val} value={val}>{(t.iiStatusLabels as string[])[i]}</option>
+                  {(t.iiStatusOptions as unknown as string[]).map((val, i) => (
+                    <option key={val} value={val}>{(t.iiStatusLabels as unknown as string[])[i]}</option>
                   ))}
                 </select>
               </div>
@@ -905,7 +991,7 @@ export default function FormularioPage() {
                         {criterion.id}
                       </span>
                       <p className="text-xs text-gray-700 leading-relaxed">
-                        {(t.iiDesignerCriteriaTexts as string[])[criterion.textIdx]}
+                        {(t.iiDesignerCriteriaTexts as unknown as string[])[criterion.textIdx]}
                       </p>
                     </div>
                     {/* Estado buttons */}
@@ -1019,7 +1105,7 @@ export default function FormularioPage() {
                             : t.iiNotEvaluated}
                         </span>
                         <p className="text-xs text-gray-500 flex-1 truncate">
-                          {(t.iiDesignerCriteriaTexts as string[])[c.textIdx]}
+                          {(t.iiDesignerCriteriaTexts as unknown as string[])[c.textIdx]}
                         </p>
                       </div>
                     )
@@ -1143,74 +1229,34 @@ export default function FormularioPage() {
                       className="btn-primary text-xs inline-flex items-center gap-1.5"
                     >
                       <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
                       </svg>
-                      {t.jsonDownloadTemplate}
+                      Descargar plantilla JSON
                     </a>
-                    <p className="text-xs text-gray-400 mt-2">{t.jsonImportDesc}</p>
                   </div>
                 </div>
               )}
-
-              {/* Create with AI tab */}
               {helpTab === 'ai' && (
                 <div className="space-y-4">
-                  <div>
-                    <h3 className="text-sm font-semibold text-gray-900">{t.helpAiTitle}</h3>
-                    <p className="text-xs text-gray-500 mt-1 leading-relaxed">{t.helpAiDesc}</p>
+                  <p className="text-xs text-gray-500 leading-relaxed">{t.helpAiDesc}</p>
+                  <div className="bg-gray-50 rounded-xl p-4 relative">
+                    <pre className="text-xs text-gray-700 whitespace-pre-wrap leading-relaxed max-h-48 overflow-y-auto">
+                      {locale === 'en' ? AI_PROMPT_EN : AI_PROMPT_ES}
+                    </pre>
                   </div>
-
-                  <div className="bg-blue-50 rounded-xl p-4 space-y-2.5">
-                    <p className="text-xs font-semibold text-blue-800">{t.helpAiHowTitle}</p>
-                    {t.helpAiHow.map((step, i) => (
-                      <div key={i} className="flex gap-2.5 text-xs text-blue-700">
-                        <span className="w-4 h-4 rounded-full bg-blue-200 text-blue-800 flex items-center justify-center text-[10px] font-bold flex-shrink-0 mt-0.5">
-                          {i + 1}
-                        </span>
-                        <span className="leading-relaxed">{step}</span>
-                      </div>
-                    ))}
-                  </div>
-
-                  <div>
-                    <textarea
-                      readOnly
-                      value={locale === 'en' ? AI_PROMPT_EN : AI_PROMPT_ES}
-                      className="w-full h-52 text-xs font-mono bg-gray-50 border border-gray-200 rounded-xl p-3 resize-none text-gray-700 focus:outline-none leading-relaxed"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => {
-                        navigator.clipboard.writeText(locale === 'en' ? AI_PROMPT_EN : AI_PROMPT_ES)
-                        setPromptCopied(true)
-                        setTimeout(() => setPromptCopied(false), 2500)
-                      }}
-                      className={`mt-2 w-full text-xs font-medium py-2.5 rounded-lg flex items-center justify-center gap-1.5 transition-colors ${
-                        promptCopied
-                          ? 'bg-green-600 hover:bg-green-700 text-white'
-                          : 'bg-primary hover:bg-primary/90 text-white'
-                      }`}
-                    >
-                      {promptCopied ? (
-                        <>
-                          <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                          </svg>
-                          {t.helpAiCopied}
-                        </>
-                      ) : (
-                        <>
-                          <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
-                          </svg>
-                          {t.helpAiCopyBtn}
-                        </>
-                      )}
-                    </button>
-                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      navigator.clipboard.writeText(locale === 'en' ? AI_PROMPT_EN : AI_PROMPT_ES)
+                      setPromptCopied(true)
+                      setTimeout(() => setPromptCopied(false), 2000)
+                    }}
+                    className="btn-primary text-xs w-full"
+                  >
+                    {promptCopied ? '✓ Copiado' : t.helpAiCopyBtn}
+                  </button>
                 </div>
               )}
-
             </div>
           </div>
         </div>

@@ -8,11 +8,9 @@ export async function GET(
   _req: NextRequest,
   { params }: { params: { id: string } }
 ) {
-  // 1. Autenticación
+  // 1. Autenticación — invitados (sin sesión) pueden descargar actividades publicadas
   const session = await getServerSession(authOptions)
-  if (!session) {
-    return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
-  }
+  const userSession = (session?.user as any) ?? { id: null, rol: 'guest' }
 
   const id = params.id
   const lang = (_req.nextUrl.searchParams.get('lang') === 'en' ? 'en' : 'es') as 'es' | 'en'
@@ -24,8 +22,7 @@ export async function GET(
   }
 
   // 3. Consultar la actividad con todas sus relaciones
-  // Only the author or an admin may generate the PDF (prevents forge of arbitrary content).
-  const userSession = session.user as any
+  // Invitados solo pueden ver actividades publicadas; docentes ven las propias; admins ven todo.
   const [edularp] = await sql`
     SELECT e.*, u.nombre AS autor_nombre
     FROM edularp e
@@ -147,5 +144,5 @@ export async function POST(
       'Content-Length': String(pdfBytes.length),
       'Cache-Control': 'private, no-store',
     },
-  })
+    })
 }
