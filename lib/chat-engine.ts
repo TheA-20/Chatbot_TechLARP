@@ -113,13 +113,13 @@ export async function runChatEngine(input: ChatEngineInput): Promise<ChatEngineR
 
   // 1. Cargar resumen de TODAS las actividades TechLARP publicadas (con caché 5 min)
   if (!_cachedAllLarps || Date.now() > _cacheExpiry) {
-    _cachedAllLarps = await sql`
+    _cachedAllLarps = (await sql`
       SELECT e.id, e.nombre, e.descripcion, e.nivel_educativo,
              e.asignaturas, e.duracion_min, e.num_participantes
       FROM edularp e
       WHERE e.estado = 'publicado'
       ORDER BY e.nombre
-    `
+    `) as any[]
     _cacheExpiry = Date.now() + CACHE_TTL_MS
   }
   const allLarps = _cachedAllLarps!
