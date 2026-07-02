@@ -304,8 +304,23 @@ export default function InvitadoChatPage() {
         </div>
 
         {/* ── Panel de vista previa ── */}
+        {/* Mobile backdrop */}
         {previewAbierto && (
-          <div className="hidden md:flex flex-col w-1/2 border-l border-gray-200 bg-white overflow-hidden">
+          <div
+            className="fixed inset-0 bg-black/40 z-40 md:hidden"
+            onClick={() => setPreviewAbierto(false)}
+          />
+        )}
+        {previewAbierto && (
+          <div className="
+            flex flex-col bg-white overflow-hidden
+            fixed bottom-0 left-0 right-0 h-[82vh] z-50 rounded-t-2xl shadow-2xl border-t border-gray-200
+            md:relative md:bottom-auto md:left-auto md:right-auto md:z-auto md:h-auto md:rounded-none md:shadow-none md:border-t-0 md:border-l md:border-gray-200 md:w-1/2
+          ">
+            {/* Mobile drag handle */}
+            <div className="md:hidden flex justify-center pt-2 pb-1 flex-shrink-0">
+              <div className="w-10 h-1 rounded-full bg-gray-300" />
+            </div>
             <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100 bg-gray-50 flex-shrink-0">
               <div className="flex gap-1">
                 {(['resumen', 'misiones', 'roles', 'cartas'] as const).map(tab => (

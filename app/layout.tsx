@@ -22,6 +22,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <Providers>{children}</Providers>
         {/* DEI watermark – plain img avoids Next.js Image auto-basePath interaction */}
         <div
+          className="hidden md:block"
           style={{
             position: 'fixed',
             bottom: '16px',
