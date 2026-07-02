@@ -143,8 +143,11 @@ export async function runChatEngine(input: ChatEngineInput): Promise<ChatEngineR
   }
   const allLarps = _cachedAllLarps!
 
-  const resumenRepositorio = allLarps.length > 0
-    ? allLarps.map((l: any, i: number) =>
+  // Shuffle so the LLM doesn't always read activities in the same alphabetical order,
+  // which would cause it to repeatedly recommend the same top entries.
+  const shuffledLarps = [...allLarps].sort(() => Math.random() - 0.5)
+  const resumenRepositorio = shuffledLarps.length > 0
+    ? shuffledLarps.map((l: any, i: number) =>
         `${i + 1}. "${l.nombre}" — ${l.asignaturas} | ${l.nivel_educativo}`
       ).join('\n')
     : 'No hay actividades publicadas aún.'
@@ -254,7 +257,45 @@ export async function runChatEngine(input: ChatEngineInput): Promise<ChatEngineR
     }
   }
 
-  const { matched: matchedLarps, candidates: ragTopCandidates } = await buscarPorSimilitud(mensaje)
+  // Fallback: PostgreSQL full-text search when Ollama is unavailable
+  async function buscarPorKeyword(texto: string): Promise<{ matched: any[]; candidates: any[] }> {
+    try {
+      const config = isEN ? 'english' : 'spanish'
+      const query = texto.slice(0, 300)
+      const rows = (await sql`
+        SELECT id, nombre, descripcion, asignaturas, nivel_educativo,
+               duracion_min, num_participantes,
+               ts_rank(
+                 to_tsvector(${config},
+                   coalesce(nombre,'') || ' ' || coalesce(descripcion,'') || ' ' || coalesce(asignaturas,'')),
+                 plainto_tsquery(${config}, ${query})
+               ) AS similitud
+        FROM edularp
+        WHERE estado = 'publicado'
+          AND to_tsvector(${config},
+                coalesce(nombre,'') || ' ' || coalesce(descripcion,'') || ' ' || coalesce(asignaturas,'')) @@
+              plainto_tsquery(${config}, ${query})
+        ORDER BY similitud DESC
+        LIMIT 5
+      `) as any[]
+      return { matched: rows, candidates: rows }
+    } catch (err) {
+      console.warn('[chat-engine] Keyword fallback failed:', err)
+      return { matched: [], candidates: [] }
+    }
+  }
+
+  let { matched: matchedLarps, candidates: ragTopCandidates } = await buscarPorSimilitud(mensaje)
+
+  // If vector search returned nothing, try keyword search
+  if (matchedLarps.length === 0) {
+    const kw = await buscarPorKeyword(mensaje)
+    matchedLarps = kw.matched
+    ragTopCandidates = kw.candidates
+    if (kw.matched.length > 0) {
+      console.info('[chat-engine] Usando keyword fallback:', kw.matched.length, 'resultados')
+    }
+  }
 
   // 3. Construir contexto detallado con las actividades recuperadas (reducido para evitar superar límite de tokens)
   const highSimilarityMatches = matchedLarps.filter((l: any) => Number(l.similitud) > SIMILARITY_HIGH_THRESHOLD)
