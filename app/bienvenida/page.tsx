@@ -40,13 +40,13 @@ export default function BienvenidaPage() {
             href="/invitado/chat"
             className="text-base px-8 py-3 rounded-xl border border-gray-200 text-gray-700 hover:bg-gray-50 inline-block text-center"
           >
-            Probar sin registro
+            {t.tryWithoutAccount}
           </Link>
         </div>
 
         <p className="text-xs text-gray-400 mt-6">
           <Link href="/registro" className="hover:underline text-primary">
-            ¿No tienes cuenta? Regístrate gratis
+            {t.noAccountFree}
           </Link>
         </p>
 

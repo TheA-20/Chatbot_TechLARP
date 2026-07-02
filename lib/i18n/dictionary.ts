@@ -90,9 +90,9 @@ const dict = {
     chatError: 'Hubo un error. Inténtalo de nuevo.',
     chatSuggestions: [
       'Busco una actividad sobre el cambio climático para secundaria',
-      '¿Hay actividades TechLARP para trabajar la empatía en secundaria?',
+      '¿Hay actividades para trabajar la programación o el pensamiento computacional?',
       'Necesito algo corto, menos de 60 minutos, para ciencias',
-      'Quiero una actividad multidisciplinar que combine historia y tecnología',
+      'Quiero una actividad multidisciplinar que combine matemáticas y tecnología',
     ],
 
     // ── Formulario ──
@@ -391,6 +391,44 @@ const dict = {
     requestModifications: 'Solicitar cambios',
     requestModificationsPlaceholder: 'Describe los cambios necesarios para aprobar esta actividad...',
     editActivity: 'Editar actividad',
+
+    // ── Bienvenida ──
+    tryWithoutAccount: 'Probar sin registro',
+    noAccountFree: '¿No tienes cuenta? Regístrate gratis',
+
+    // ── Chat sidebar (autenticado) ──
+    conversations: 'Conversaciones',
+    noPreviousConversations: 'No hay conversaciones previas',
+    backToPanel: 'Volver al panel',
+
+    // ── Preview panel compartido ──
+    modifiedBadge: 'modificada',
+    clickToEdit: 'Haz clic para editar',
+    downloadModified: 'Descargar versión modificada',
+    discardChanges: 'Descartar cambios',
+    tapToEdit: 'Toca cualquier texto para editarlo',
+    previewLabelTitle: 'Título',
+    previewResetEdits: 'Deshacer',
+    previewParallelRealities: 'Realidades paralelas',
+    previewLabelFantasy: 'Ficción',
+    previewLabelReality: 'Realidad',
+    previewEditTip: 'Haz clic en cualquier texto para editarlo y descarga el PDF modificado.',
+
+    // ── Guest banner ──
+    guestBanner: 'Estás en modo invitado. Tu conversación no se guarda.',
+    guestCreateAccount: 'Crea una cuenta gratuita',
+    guestLogIn: 'Iniciar sesión',
+    guestBack: 'Inicio',
+
+    // ── Card type labels ──
+    cardTypeLabels: {
+      personaje: 'Personaje',
+      habilidad: 'Habilidad',
+      objeto: 'Objeto',
+      evento: 'Evento',
+      figura_historica: 'Figura histórica',
+      otro: 'Otro',
+    },
   },
 
   en: {
@@ -482,9 +520,9 @@ const dict = {
     chatError: 'An error occurred. Please try again.',
     chatSuggestions: [
       'I\'m looking for a climate change activity for secondary school',
-      'Are there TechLARP activities for working on empathy in secondary school?',
+      'Are there activities for teaching programming or computational thinking?',
       'I need something short, under 60 minutes, for science',
-      'I want a multidisciplinary activity combining history and technology',
+      'I want a multidisciplinary activity combining maths and technology',
     ],
 
     // ── Form ──
@@ -753,7 +791,7 @@ const dict = {
     previewLabelRealConnection: 'Pedagogical',
 
     // ── Tran
-    // ── Translate feature ──
+    // ──    // ── Translate feature ──
     translateToEn: '🌐 Translate to English',
     translateToEs: '🌐 Translate to Spanish',
     translating: 'Translating...',
@@ -786,6 +824,44 @@ const dict = {
     requestModifications: 'Request changes',
     requestModificationsPlaceholder: 'Describe the changes needed to approve this activity...',
     editActivity: 'Edit activity',
+
+    // ── Welcome page ──
+    tryWithoutAccount: 'Try without registering',
+    noAccountFree: 'No account? Register for free',
+
+    // ── Chat sidebar (authenticated) ──
+    conversations: 'Conversations',
+    noPreviousConversations: 'No previous conversations',
+    backToPanel: 'Back to panel',
+
+    // ── Shared preview panel ──
+    modifiedBadge: 'modified',
+    clickToEdit: 'Click to edit',
+    downloadModified: 'Download modified version',
+    discardChanges: 'Discard changes',
+    tapToEdit: 'Tap any text to edit it',
+    previewLabelTitle: 'Title',
+    previewResetEdits: 'Reset',
+    previewParallelRealities: 'Parallel realities',
+    previewLabelFantasy: 'Fantasy',
+    previewLabelReality: 'Reality',
+    previewEditTip: 'Click on any text to edit it inline, then download the modified PDF.',
+
+    // ── Guest banner ──
+    guestBanner: 'You are in guest mode. Your conversation is not saved.',
+    guestCreateAccount: 'Create free account',
+    guestLogIn: 'Log in',
+    guestBack: 'Home',
+
+    // ── Card type labels ──
+    cardTypeLabels: {
+      personaje: 'Character',
+      habilidad: 'Ability',
+      objeto: 'Object',
+      evento: 'Event',
+      figura_historica: 'Historical figure',
+      otro: 'Other',
+    },
   },
 } as const
 

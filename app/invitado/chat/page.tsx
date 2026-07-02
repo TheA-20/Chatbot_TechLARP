@@ -161,17 +161,13 @@ export default function InvitadoChatPage() {
 
       {/* ── Banner de invitado ── */}
       <div className="bg-primary/90 text-white text-xs text-center py-1.5 px-4 flex items-center justify-center gap-3 flex-shrink-0">
-        <span>
-          {locale === 'en'
-            ? 'You are in guest mode. Your conversation is not saved.'
-            : 'Estas en modo invitado. Tu conversacion no se guarda.'}
-        </span>
+        <span>{t.guestBanner}</span>
         <Link href="/registro" className="underline font-semibold hover:opacity-80">
-          {locale === 'en' ? 'Create free account' : 'Crea una cuenta gratuita'}
+          {t.guestCreateAccount}
         </Link>
         <span className="text-white/50">|</span>
         <Link href="/login" className="underline font-semibold hover:opacity-80">
-          {locale === 'en' ? 'Log in' : 'Iniciar sesion'}
+          {t.guestLogIn}
         </Link>
       </div>
 
@@ -181,7 +177,7 @@ export default function InvitadoChatPage() {
           <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
           </svg>
-          {locale === 'en' ? 'Back' : 'Inicio'}
+          {t.guestBack}
         </Link>
         <div className="flex justify-center">
           <Image
@@ -301,7 +297,7 @@ export default function InvitadoChatPage() {
                 disabled={cargando || !input.trim()}
                 className="btn-primary text-sm px-4 py-2.5 rounded-xl disabled:opacity-40"
               >
-                {locale === 'en' ? 'Send' : 'Enviar'}
+                {t.send}
               </button>
             </div>
           </div>
@@ -318,7 +314,10 @@ export default function InvitadoChatPage() {
                       previewTab === tab ? 'bg-primary text-white' : 'text-gray-500 hover:bg-gray-200'
                     }`}
                   >
-                    {tab === 'resumen' ? (locale === 'en' ? 'Summary' : 'Resumen') : tab.charAt(0).toUpperCase() + tab.slice(1)}
+                    {tab === 'resumen'  ? t.previewTabSummary
+                     : tab === 'misiones' ? t.previewTabMissions
+                     : tab === 'roles'    ? t.previewTabRoles
+                     :                     t.previewTabCards}
                   </button>
                 ))}
               </div>
@@ -330,12 +329,12 @@ export default function InvitadoChatPage() {
                       disabled={!!downloading}
                       className="text-xs px-3 py-1.5 rounded-lg bg-primary text-white hover:bg-primary/90 disabled:opacity-50"
                     >
-                      {downloading?.startsWith('mod_') ? '...' : (locale === 'en' ? 'Download PDF' : 'Descargar PDF')}
+                      {downloading?.startsWith('mod_') ? '...' : t.downloadPdf}
                     </button>
                     {Object.keys(previewEdits).length > 0 && (
                       <button onClick={() => { setPreviewEdits({}); setEditingField(null) }}
                         className="text-xs px-2 py-1.5 rounded-lg text-gray-500 hover:bg-gray-100">
-                        {locale === 'en' ? 'Reset' : 'Deshacer'}
+                        {t.previewResetEdits}
                       </button>
                     )}
                   </>
@@ -351,7 +350,7 @@ export default function InvitadoChatPage() {
             <div className="flex-1 overflow-y-auto p-4 text-sm">
               {previewCargando && (
                 <div className="flex items-center justify-center h-32 text-gray-400 text-xs">
-                  {locale === 'en' ? 'Loading...' : 'Cargando...'}
+                  {t.loading}
                 </div>
               )}
 
@@ -360,7 +359,7 @@ export default function InvitadoChatPage() {
                   {previewTab === 'resumen' && (
                     <div className="space-y-4">
                       <div>
-                        <p className="text-xs text-gray-400 mb-1">{locale === 'en' ? 'Title' : 'Titulo'}</p>
+                        <p className="text-xs text-gray-400 mb-1">{t.previewLabelTitle}</p>
                         {editingField === 'larp|nombre'
                           ? <textarea value={pv('larp|nombre', previewData.larp.nombre)}
                               onChange={e => setPreviewField('larp|nombre', e.target.value)}
@@ -380,7 +379,7 @@ export default function InvitadoChatPage() {
                         <span className="bg-gray-100 text-gray-600 px-2 py-1 rounded-full">{previewData.larp.num_participantes} {locale === 'en' ? 'participants' : 'participantes'}</span>
                       </div>
                       <div>
-                        <p className="text-xs text-gray-400 mb-1">{locale === 'en' ? 'Description' : 'Descripcion'}</p>
+                        <p className="text-xs text-gray-400 mb-1">{t.previewLabelDescription}</p>
                         {editingField === 'larp|descripcion'
                           ? <textarea value={pv('larp|descripcion', previewData.larp.descripcion)}
                               onChange={e => setPreviewField('larp|descripcion', e.target.value)}
@@ -409,10 +408,10 @@ export default function InvitadoChatPage() {
                       )}
                       {previewData.paralelos.length > 0 && (
                         <div>
-                          <p className="text-xs text-gray-400 mb-2">{locale === 'en' ? 'Parallel realities' : 'Realidades paralelas'}</p>
+                          <p className="text-xs text-gray-400 mb-2">{t.previewParallelRealities}</p>
                           {previewData.paralelos.map((p: any, i: number) => (
                             <div key={i} className="mb-3 p-2 bg-gray-50 rounded-lg">
-                              <p className="text-xs font-medium text-gray-500 mb-1">{locale === 'en' ? 'Fantasy' : 'Ficcion'}</p>
+                              <p className="text-xs font-medium text-gray-500 mb-1">{t.previewLabelFantasy}</p>
                               {editingField === `paralelos|${i}|narrativa`
                                 ? <textarea value={pv(`paralelos|${i}|narrativa`, p.narrativa)}
                                     onChange={e => setPreviewField(`paralelos|${i}|narrativa`, e.target.value)}
@@ -423,7 +422,7 @@ export default function InvitadoChatPage() {
                                     {pv(`paralelos|${i}|narrativa`, p.narrativa)}
                                   </p>
                               }
-                              <p className="text-xs font-medium text-gray-500 mt-2 mb-1">{locale === 'en' ? 'Reality' : 'Realidad'}</p>
+                              <p className="text-xs font-medium text-gray-500 mt-2 mb-1">{t.previewLabelReality}</p>
                               {editingField === `paralelos|${i}|mundo_real`
                                 ? <textarea value={pv(`paralelos|${i}|mundo_real`, p.mundo_real)}
                                     onChange={e => setPreviewField(`paralelos|${i}|mundo_real`, e.target.value)}
@@ -455,7 +454,7 @@ export default function InvitadoChatPage() {
                                 {i + 1}. {pv(`misiones|${i}|titulo`, m.titulo)}
                               </p>
                           }
-                          <p className="text-xs text-gray-400 mb-1">{locale === 'en' ? 'Objective' : 'Objetivo'}</p>
+                          <p className="text-xs text-gray-400 mb-1">{t.previewLabelObjective}</p>
                           {editingField === `misiones|${i}|objetivo`
                             ? <textarea value={pv(`misiones|${i}|objetivo`, m.objetivo)}
                                 onChange={e => setPreviewField(`misiones|${i}|objetivo`, e.target.value)}
@@ -511,11 +510,7 @@ export default function InvitadoChatPage() {
             {/* Tip de edicion */}
             {previewData && (
               <div className="px-4 py-2 border-t border-gray-100 bg-amber-50 flex-shrink-0">
-                <p className="text-xs text-amber-700">
-                  {locale === 'en'
-                    ? 'Click on any text to edit it inline, then download the modified PDF.'
-                    : 'Haz clic en cualquier texto para editarlo y descarga el PDF modificado.'}
-                </p>
+                <p className="text-xs text-amber-700">{t.previewEditTip}</p>
               </div>
             )}
           </div>

@@ -31,6 +31,25 @@ let _cacheExpiry = 0
 const CACHE_TTL_MS = 5 * 60 * 1000 // 5 minutos
 
 // ---------------------------------------------------------------------------
+// Warm-up de Ollama — envía un embedding de prueba al arrancar el módulo para
+// asegurar que nomic-embed-text está cargado en memoria antes de la primera
+// petición real. Falla silenciosamente si Ollama no está disponible.
+// ---------------------------------------------------------------------------
+;(async () => {
+  try {
+    await fetch(`${OLLAMA_BASE_URL}/api/embeddings`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ model: 'nomic-embed-text', prompt: 'warmup' }),
+      signal: AbortSignal.timeout(30_000),
+    })
+    console.info('[chat-engine] Ollama warm-up completado')
+  } catch {
+    console.warn('[chat-engine] Ollama warm-up fallido — el primer embedding puede tardar más')
+  }
+})()
+
+// ---------------------------------------------------------------------------
 // Ollama fallback — OpenAI-compatible endpoint, no rate limit, runs locally
 // ---------------------------------------------------------------------------
 async function ollamaChat(
@@ -179,12 +198,11 @@ export async function runChatEngine(input: ChatEngineInput): Promise<ChatEngineR
   // re-ordena y se queda con el top 5 (candidates) + los que superan el umbral (matched).
   async function buscarPorSimilitud(texto: string): Promise<{ matched: any[]; candidates: any[] }> {
     try {
-      const ollamaUrl = process.env.OLLAMA_URL ?? 'http://localhost:11434'
-      const embedRes = await fetch(`${ollamaUrl}/api/embeddings`, {
+      const embedRes = await fetch(`${OLLAMA_BASE_URL}/api/embeddings`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ model: 'nomic-embed-text', prompt: texto }),
-        signal: AbortSignal.timeout(10_000),
+        signal: AbortSignal.timeout(25_000),
       })
 
       if (!embedRes.ok) {
@@ -331,7 +349,8 @@ RULES:
 - SCOPE — EDUCATIONAL LEVEL: TechLARP's repository covers primary and secondary education only (including early childhood and ESO/compulsory secondary). If the teacher asks for activities for baccalaureate, vocational training, university, or any other level beyond secondary, do NOT ask generic clarifying questions (time available, group size, etc.) — kindly explain that the repository is designed for primary and secondary levels, and ask if they're looking for something for a primary or secondary group instead.
 - SCOPE — REQUEST TYPE: TechLARP provides LARP-based educational activities (missions, roles, narrative scenarios) — NOT exams, tests, quizzes, worksheets, or other assessment instruments. If the teacher asks for an exam, test, quiz, or similar evaluation material, do NOT search for a matching activity or ask generic clarifying questions — kindly clarify that TechLARP offers LARP activities rather than assessment tools, and ask if they'd like a LARP activity on a related topic instead.
 - ⚠️ DOWNLOAD — CRITICAL: When a user says anything like "download", "download PDF", "get the PDF", "save the file", or similar, you MUST reply that the PDF download button appears just below this message. NEVER say you cannot provide files. NEVER say you are a text-only assistant. The download button is ALWAYS available.
-- INTERACTIVE PREVIEW: This interface has a side panel that shows full activity details (missions, roles, cards, parallels, objectives). When you recommend a specific activity, ALWAYS end with: "Would you like to know more about this activity, or would you prefer I suggest other options?" ONLY when the user explicitly confirms they want that activity (replies "yes", "that one", "I like it", "show me", "that's it", "go ahead", "more about it", "tell me more" or similar confirmation), include the exact token <<VISTA_PREVIA>> at the very start of your response. If the user asks for other options or wants to change, do NOT include <<VISTA_PREVIA>>.
+- INTERACTIVE PREVIEW: This interface has a side panel that shows full activity details (missions, roles, cards, parallels, objectives). The panel opens automatically when the user clicks the activity name button that appears below each recommendation. When you recommend a specific activity, ALWAYS end with: "Would you like to know more about this activity, or would you prefer I suggest other options?" ONLY when the user explicitly confirms they want that activity (replies "yes", "that one", "I like it", "show me", "that's it", "go ahead", "more about it", "tell me more", "more details", "see details", "can see more", "details", "more info" or similar confirmation), include the exact token <<VISTA_PREVIA>> at the very start of your response. If the user asks for other options or wants to change, do NOT include <<VISTA_PREVIA>>.
+- ⚠️ SIDE PANEL — IF USER SAYS THEY CAN'T SEE IT: If the user says the side panel is not visible, is missing, or they cannot see it, tell them to click the purple/colored button with the activity name that appears just below the recommendation in the chat. NEVER tell users to scroll right, refresh the page, or that it should appear automatically — it only opens when they click the activity button.
 - ⚠️ TRANSLATION — CRITICAL: The database stores activity data in Spanish. You are currently in an ENGLISH session. You MUST translate EVERYTHING into English before presenting it: activity names, subjects, level, duration, descriptions, missions, roles, objectives, parallels, evaluation, materials. NEVER show raw Spanish text to the user. If the activity name or any field is in Spanish, translate it.
 
 ═══════════════════════════════════════════════════════
@@ -459,7 +478,8 @@ REGLAS:
 - ALCANCE — NIVEL EDUCATIVO: El repositorio de TechLARP cubre únicamente educación primaria y secundaria (incluyendo educación infantil y la ESO). Si la docente pide actividades para bachillerato, FP, universidad o cualquier nivel más allá de la secundaria obligatoria, NO hagas preguntas genéricas de contexto (tiempo disponible, tamaño del grupo, etc.) — explica amablemente que el repositorio está diseñado para primaria y secundaria, y pregunta si busca algo para un grupo de primaria o secundaria.
 - ALCANCE — TIPO DE PETICIÓN: TechLARP ofrece actividades educativas basadas en LARP (misiones, roles, escenarios narrativos), NO exámenes, pruebas tipo test, cuestionarios ni material de evaluación. Si la docente pide un examen, prueba tipo test, cuestionario o similar, NO busques una actividad que encaje ni hagas preguntas genéricas de contexto — aclara amablemente que TechLARP ofrece actividades LARP en lugar de herramientas de evaluación, y pregunta si le interesaría una actividad LARP sobre un tema relacionado.
 - ⚠️ DESCARGA — CRÍTICO: Cuando el usuario diga "descargar", "descargar PDF", "descarga", "quiero el PDF" o similar, DEBES responder que el botón de descarga del PDF aparece justo debajo de este mensaje. NUNCA digas que no puedes proporcionar archivos. NUNCA digas que eres solo un asistente de texto. El botón de descarga SIEMPRE está disponible.
-- VISTA PREVIA INTERACTIVA: Esta interfaz tiene un panel lateral que muestra todos los detalles de una actividad (misiones, roles, cartas, paralelos, objetivos). Cuando recomiendes una actividad concreta, termina SIEMPRE con: "¿Quieres saber más sobre esta actividad o prefieres que mencione otras opciones?" SÓLO cuando el usuario confirme explícitamente que quiere esa actividad (responda "sí", "esa", "me gusta", "quiero verla", "muestramela", "esa misma", "perfecto", "adelante", "saber más" o similar confirmación), incluye la cadena exacta <<VISTA_PREVIA>> al inicio de tu respuesta. Si el usuario pide otras opciones o quiere cambiar, NO incluyas <<VISTA_PREVIA>>.
+- VISTA PREVIA INTERACTIVA: Esta interfaz tiene un panel lateral que muestra todos los detalles de una actividad (misiones, roles, cartas, paralelos, objetivos). El panel se abre cuando el usuario hace clic en el botón con el nombre de la actividad que aparece debajo de cada recomendación en el chat. Cuando recomiendes una actividad concreta, termina SIEMPRE con: "¿Quieres saber más sobre esta actividad o prefieres que mencione otras opciones?" SÓLO cuando el usuario confirme explícitamente que quiere esa actividad (responda "sí", "esa", "me gusta", "quiero verla", "muestramela", "esa misma", "perfecto", "adelante", "saber más", "ver detalles", "más detalles", "más información", "cuéntame más" o similar confirmación), incluye la cadena exacta <<VISTA_PREVIA>> al inicio de tu respuesta. Si el usuario pide otras opciones o quiere cambiar, NO incluyas <<VISTA_PREVIA>>.
+- ⚠️ PANEL LATERAL — SI EL USUARIO DICE QUE NO LO VE: Si el usuario dice que no ve el panel lateral, que no aparece o que no puede verlo, indícale que debe hacer clic en el botón de color con el nombre de la actividad que aparece justo debajo de la recomendación en el chat. NUNCA digas que debe hacer scroll a la derecha, recargar la página, ni que debería aparecer solo — el panel solo se abre al hacer clic en ese botón.
 
 ═══════════════════════════════════════════════════════
 EJEMPLOS DE LENGUAJE INCLUSIVO — PATRONES CORRECTOS
@@ -582,9 +602,7 @@ ${contextoDetallado}`
     textoRespuesta = textoRespuesta.replace(/<<VISTA_PREVIA>>\s*/g, '').trimStart()
   }
 
-  // 8b. Revision post-procesada de lenguaje inclusivo (solo ES, solo si hay infraccion).
-  //     Usa Haiku internamente para corregir con latencia minima.
-  //     Si la revision falla, el texto original se envia sin interrumpir el flujo.
+  // 8b. Revision post-procesada de lenguaje inclusivo
   const { texto: textoRevisado } = await revisarLenguajeInclusivo(textoRespuesta, locale)
   textoRespuesta = textoRevisado
 
@@ -595,7 +613,7 @@ ${contextoDetallado}`
       .map((l: any) => l.nombre.toLowerCase())
       .filter((nombre: string) => {
         const escaped = nombre.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
-        return new RegExp(`(?<![\\wÀ-ɏ])${escaped}(?![\\wÀ-ɏ])`, 'i').test(respuestaLower)
+        return new RegExp(`(?<![\\w\u00C0-\u024F])${escaped}(?![\\w\u00C0-\u024F])`, 'i').test(respuestaLower)
       })
   )
   const larpsEnRespuesta = allLarps.filter((l: any) => nombresEnRespuesta.has(l.nombre.toLowerCase()))
